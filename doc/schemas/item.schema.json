@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/item.schema.json",
+  "title": "Items Registry File (items.json)",
+  "description": "Schema for the items registry. Per ADR-0005, items are pure-data Registry File entries with optional scene references for world-droppable items. The items.json file at project root maps item ids to item definitions.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Item"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Item": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "weapon",
+            "tool",
+            "armor",
+            "food",
+            "drink",
+            "material",
+            "consumable",
+            "container",
+            "key_item",
+            "tech_component",
+            "magic_artifact",
+            "cosmic_relic"
+          ],
+          "description": "Top-level category. Drives default UI affordances and inventory grouping."
+        },
+        "stack_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Maximum stack size in inventory."
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Weight in grams. Used for encumbrance."
+        },
+        "icon": {
+          "$ref": "_common.schema.json#/$defs/AssetRef",
+          "description": "UI icon for inventory display."
+        },
+        "world_drop_scene": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "Optional. scene:* URN for the world representation when this item is dropped. Items not droppable in the world (key items, abstract resources) omit this field."
+        },
+        "properties": {
+          "type": "object",
+          "description": "Category-specific properties. The validator extends with per-category sub-schemas (weapon has damage, tool has tool_type, food has nutrition, etc.).",
+          "additionalProperties": true
+        },
+        "tags": {
+          "type": "array",
+          "description": "Optional informal tags for filtering and storylet preconditions. Tags are not centrally registered; each project documents conventions in its README.",
+          "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+          "uniqueItems": true
+        },
+        "gear_category": {
+          "type": "string",
+          "enum": ["conventional", "drift_powered"],
+          "description": "Per the Project Halcyon design doc. Conventional gear (iron axes, crossbows, swords, hide armor, salted meat) accumulates no Drift on use. Drift-Powered gear (Tesla weapons, ritual implements, Heart-Class artifacts, certain consumables) accumulates Drift per use, scaled by the Drift Accumulation Curve. Items omit this field if neither applies (raw materials, abstract resources)."
+        },
+        "drift_on_use": {
+          "type": "object",
+          "description": "Drift accumulation per use of this item. Per-use baseline; the engine multiplies by the Drift Accumulation Curve at runtime. Required when gear_category is 'drift_powered'; ignored when gear_category is 'conventional' or absent.",
+          "properties": {
+            "resonance_per_use": { "type": "number", "minimum": 0 },
+            "null_per_use": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "lore": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Optional lore text. Surfaced in item-inspect UI and consumable by storylets."
+        }
+      },
+      "required": ["display_name", "category", "stack_size"],
+      "additionalProperties": false
+    }
+  }
+}

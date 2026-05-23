@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/macro_faction.schema.json",
+  "title": "Macro Faction Entity Directory (macro_factions/<id>/data.json)",
+  "description": "Schema for authored Macro Faction entries. Per the Project Halcyon design doc, a Macro Faction is the highest-level cultural-political identity in the world (Karnish, Veranthi, Sethrai, Halcyon being the four canonical for the flagship game). Macros are composed of Sub-Factions; macro-level state rolls up from sub-faction state, but macros themselves carry identity, culture, primary biome affinity, and player reputation independently.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Stable id (e.g., 'karnish', 'veranthi', 'sethrai', 'halcyon'). Referenced via 'macro_faction:<id>' URN."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "culture": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Primary culture URN. Macro Factions are usually mono-cultural at the macro level (Karnish macro = karnish culture); polyglot situations are modeled as the Macro carrying multiple cultures via the optional culture_pool field."
+    },
+    "culture_pool": {
+      "type": "array",
+      "description": "Optional. Multi-culture Macro Factions (rare; the Halcyon macro is an example, mixing arcadian with assimilated locals over time). Overrides 'culture' when present. Includes the primary culture as its first entry by convention.",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "minItems": 1
+    },
+    "tech_baseline": {
+      "type": "string",
+      "enum": ["stone", "copper", "bronze", "iron", "iron_age", "medieval", "early_modern", "tesla_punk", "post_tech"],
+      "description": "Tech tier of this macro overall. Sub-Factions may diverge slightly. Used by Global Faction Events for tier-scaled impact (e.g., Pattern Sickness outbreaks hit pre-industrial macros harder)."
+    },
+    "biome_affinity": {
+      "type": "array",
+      "description": "Biomes this Macro Faction's Sub-Factions tend to settle in (per the Biome-to-Macro Mapping rule). Worldgen places macros and their sub-factions in these biomes by preference.",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "minItems": 1
+    },
+    "macro_attitudes": {
+      "type": "array",
+      "description": "Default macro-to-macro relationship attitudes. Roll up from sub-faction-level attitudes but provide a coarse default at world start.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "toward_macro": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+          "attitude": {
+            "type": "string",
+            "enum": ["allied", "friendly", "neutral", "wary", "rival", "hostile", "at_war"]
+          }
+        },
+        "required": ["toward_macro", "attitude"],
+        "additionalProperties": false
+      }
+    },
+    "player_reputation_initial": {
+      "type": "number",
+      "minimum": -1,
+      "maximum": 1,
+      "default": 0,
+      "description": "Initial player reputation with this Macro Faction at world start, in [-1, 1]. Sub-Faction reputations may diverge from macro reputation over play."
+    },
+    "rollup_strategy": {
+      "type": "string",
+      "enum": ["weighted_average", "sum", "max_member", "min_member", "dominant_member"],
+      "default": "weighted_average",
+      "description": "How sub-faction State Vector values aggregate into macro-level state. weighted_average uses sub-faction Reach as weights (default). dominant_member uses the strongest sub-faction's values directly (used by hegemonic macros)."
+    },
+    "is_player_macro": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for the macro the player belongs to (Halcyon in the flagship game). Special handling for visibility (full internal visibility), Storyteller framing (player events fire at this macro's sub-factions preferentially), and recruitment defaults."
+    },
+    "lore": {
+      "type": "string",
+      "maxLength": 8192,
+      "description": "Macro-level lore. Sub-Faction lore is layered on top per sub-faction."
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional informal tags.",
+      "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+      "uniqueItems": true
+    }
+  },
+  "required": ["id", "display_name", "tech_baseline", "biome_affinity"],
+  "additionalProperties": false,
+  "anyOf": [
+    { "required": ["culture"] },
+    { "required": ["culture_pool"] }
+  ]
+}

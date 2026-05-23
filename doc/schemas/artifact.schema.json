@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/artifact.schema.json",
+  "title": "Resonance Web Artifact Entity Directory (artifacts/<id>/data.json)",
+  "description": "Schema for Resonance Web artifacts per the Project Halcyon design doc. Artifacts are 'remembered into being' living nodes from the Architectural Age. Four classes: Heart (7 named major nodes, always present), Voice (transmits/amplifies), Eye (perceives probabilities/unreal time), Hand (manipulates matter/energy/code). Distribution between Halcyon Cargo Manifest and planet-native is procgen per playthrough.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Stable id, e.g., 'chorus_drive', 'silence_kernel', 'axion_halo'. The seven Heart-Class artifacts have canonical authored ids. Voice/Eye/Hand artifacts may be authored or procgen-named."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96
+    },
+    "artifact_class": {
+      "type": "string",
+      "enum": ["heart", "voice", "eye", "hand"],
+      "description": "Resonance Web class. Heart: one of seven major nodes, transforms an aspect of being. Voice: transmits/amplifies. Eye: perceives probabilities and unreal time. Hand: manipulates matter, energy, or code."
+    },
+    "alignment": {
+      "type": "string",
+      "enum": ["broadcast", "silence", "balanced"],
+      "description": "Cosmological alignment. Broadcast-aligned artifacts add Resonance Drift on use; Silence-aligned add Null Drift; balanced add small amounts of both."
+    },
+    "form": {
+      "type": "string",
+      "maxLength": 96,
+      "description": "Physical form description (e.g., 'Heart Crystal', 'Black Sphere', 'Floating Crown', 'Fractal Tetrahedron', 'Gyroscopic Core', 'Liquid Mirror', 'Infinite Halo')."
+    },
+    "transforms": {
+      "type": "string",
+      "maxLength": 96,
+      "description": "What aspect this artifact transforms (Heart class only). E.g., 'emotion', 'memory', 'perception', 'creation', 'energy', 'consciousness', 'existence'."
+    },
+    "primary_ability_name": {
+      "type": "string",
+      "maxLength": 96,
+      "description": "Named primary ability (e.g., 'Empathic Technomancy', 'Perfect Erasure', 'Temporal Omniscience', 'Reality Sculpting', 'Universal Equilibrium', 'Multiversal Identity', 'Total Unification')."
+    },
+    "drift_on_handle": {
+      "type": "object",
+      "description": "Drift Spike values when the player handles or activates this artifact. Per the design doc's Drift Spike concept (large one-time additions ignoring the Accumulation Curve).",
+      "properties": {
+        "resonance_spike": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "null_spike": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "additionalProperties": false
+    },
+    "placement_pool": {
+      "type": "string",
+      "enum": ["cargo_only", "planet_native_only", "either", "tier_locked"],
+      "description": "Procgen placement constraint. cargo_only: always in the Halcyon's cargo manifest. planet_native_only: always somewhere on the planet pre-history. either: procgen picks per playthrough. tier_locked: gated behind a specific progression tier (boss-defeat, Drift band, Faction Integration) regardless of pool."
+    },
+    "tier_lock": {
+      "type": "object",
+      "description": "Optional. If placement_pool is tier_locked or partial, what gate releases this artifact for acquisition.",
+      "properties": {
+        "gate_type": {
+          "type": "string",
+          "enum": ["boss_defeat", "drift_band", "faction_integration", "knowledge_unlock", "endgame_phase"]
+        },
+        "gate_target": {
+          "type": "string",
+          "maxLength": 96,
+          "description": "What specifically gates: a boss URN, a Drift band name, a faction URN, a knowledge unlock id, or the endgame phase name."
+        }
+      },
+      "required": ["gate_type"],
+      "additionalProperties": false
+    },
+    "endgame_role": {
+      "type": "string",
+      "enum": ["merge_pivot", "restoration_left", "restoration_right", "annihilation_left", "annihilation_right", "ascension_component", "none"],
+      "description": "If this artifact is load-bearing for one of the five endings (per the design doc), what role it plays. The Prime Array is the merge_pivot. Architect's Key + Wound of Echoes are the Restoration pair. Silence Kernel + Null Engine are the Annihilation pair. Etc."
+    },
+    "scene": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Scene URN for the artifact's in-world representation (when held, when placed in a vault, when activated)."
+    },
+    "lore": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional informal tags (e.g., 'resonance_web', 'heart_class', 'cargo_manifest', 'planet_native').",
+      "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+      "uniqueItems": true
+    }
+  },
+  "required": ["id", "display_name", "artifact_class", "alignment", "placement_pool"],
+  "additionalProperties": false
+}

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/settlement.schema.json",
+  "title": "Settlement Point Entity Directory (settlements/<id>/data.json)",
+  "description": "Schema for Settlement Points per the Project Halcyon design doc. Each Sub-Faction holds 1-3 named settlements. Each settlement contributes to its parent Sub-Faction's State Vector (loss directly modifies Martial Power, Defensive Posture, Reach). Settlements can be captured, sacked, burned, abandoned. Influence Zones radiate from settlements; overlaps form Contested Zones.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "description": "Settlement name (e.g., 'Pinewolf Hold', 'Tarrick's Crown', 'Black Iris Quay'). Lore-bearing; the design doc uses these names directly in faction descriptions."
+    },
+    "sub_faction": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Required. Parent Sub-Faction this settlement belongs to. Settlement state contributes to the Sub-Faction's State Vector roll-up."
+    },
+    "settlement_type": {
+      "type": "string",
+      "enum": ["capital", "town", "hold", "ritual_site", "trade_post", "fortress", "ruined"],
+      "description": "Settlement classification. capital: the Sub-Faction's seat (1 per Sub-Faction max). town: standard population center. hold: Karnish-style clan stronghold. ritual_site: Sethrai pyramid or temple. trade_post: economic hub. fortress: military strongpoint. ruined: post-collapse remnant (becomes a Ruin per the design doc)."
+    },
+    "tile_assignment": {
+      "type": "object",
+      "description": "Where on the hex tile graph this settlement is placed.",
+      "oneOf": [
+        {
+          "properties": {
+            "explicit_tile": { "type": "integer", "minimum": 0 }
+          },
+          "required": ["explicit_tile"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "criteria": {
+              "type": "object",
+              "properties": {
+                "biome_preference": {
+                  "type": "array",
+                  "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+                },
+                "latitude_band": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+                "near_water": { "type": "boolean" },
+                "elevation_band": { "type": "string", "enum": ["lowland", "highland", "coast", "any"] }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": ["criteria"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "population_capacity": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Abstract population this settlement supports. Contributes to Sub-Faction Reach calculations."
+    },
+    "influence_radius_tiles": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Base Influence Zone radius from this settlement in hex tiles. Multiplied by parent Sub-Faction's Reach at runtime to determine effective influence area."
+    },
+    "settlement_state_contributions": {
+      "type": "object",
+      "description": "What this settlement contributes to its parent Sub-Faction's State Vector. The Sub-Faction's State Vector is the sum/aggregate of its settlements' contributions. Loss of this settlement subtracts these contributions.",
+      "properties": {
+        "martial_power_contribution": { "type": "number", "minimum": 0, "maximum": 1 },
+        "defensive_posture_contribution": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reach_contribution": { "type": "number", "minimum": 0, "maximum": 1 },
+        "treasury_per_year": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "named_npcs": {
+      "type": "array",
+      "description": "Authored named NPC URNs that inhabit this settlement at world start.",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "uniqueItems": true
+    },
+    "ruined_state": {
+      "type": "object",
+      "description": "Optional. Present when settlement_type is 'ruined' (a pre-existing Ruin from a dead Sub-Faction's old settlement). Contains loot tables, void-touched haunting probability, and the former leader's name preserved in the ruin's display.",
+      "properties": {
+        "former_sub_faction": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "URN of the dead Sub-Faction this settlement used to belong to."
+        },
+        "former_leader_name": { "type": "string", "maxLength": 96 },
+        "haunting_chance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Probability that the ruin is Void-Touched-haunted (per the Sundering thesis that Sub-Faction collapse creates Interference residue)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "lore": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "scene": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Optional scene URN for the settlement's in-world representation."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+      "uniqueItems": true
+    }
+  },
+  "required": ["id", "display_name", "sub_faction", "settlement_type", "tile_assignment", "population_capacity"],
+  "additionalProperties": false
+}

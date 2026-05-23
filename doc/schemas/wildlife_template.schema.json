@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/wildlife_template.schema.json",
+  "title": "Wildlife Template",
+  "description": "Schema for a procgen wildlife template per ADR-0014. World generation and runtime spawning instantiate templates to produce concrete wildlife instances. Lives in wildlife_templates/<template_id>/data.json.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "_common.schema.json#/$defs/Identifier"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "species": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["mammal", "bird", "reptile", "fish", "insect", "amphibian", "magical_beast", "cosmic_horror", "construct", "undead"]
+    },
+    "diet": {
+      "type": "string",
+      "enum": ["herbivore", "carnivore", "omnivore", "scavenger", "drains_life", "consumes_minds", "none"]
+    },
+    "aggression": {
+      "type": "string",
+      "enum": ["passive", "neutral", "defensive", "territorial", "hostile", "predatory", "rabid"]
+    },
+    "behavior_tree": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "All instances share the same behavior tree."
+    },
+    "combat_stat_ranges": {
+      "type": "object",
+      "description": "Optional. Stat ranges sampled per instance. Omit for non-combatant or unkillable templates.",
+      "properties": {
+        "max_health": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+        "damage": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "damage_type": {
+          "type": "string",
+          "enum": ["physical", "fire", "cold", "lightning", "poison", "magical", "void"]
+        },
+        "armor": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "magic_resistance": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "tech_resistance": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "speed": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+      },
+      "required": ["max_health", "damage", "damage_type", "speed"],
+      "additionalProperties": false
+    },
+    "drops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+          "count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+          "probability": { "$ref": "_common.schema.json#/$defs/ProbabilityWeight" }
+        },
+        "required": ["item", "count_range"],
+        "additionalProperties": false
+      }
+    },
+    "biome_affinity": {
+      "type": "array",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+    },
+    "active_periods": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["dawn", "day", "dusk", "night", "always"]
+      },
+      "uniqueItems": true
+    },
+    "spawn_density": {
+      "$ref": "_common.schema.json#/$defs/NumberRange",
+      "description": "Default per-tile spawn density. Biomes' wildlife_templates_native may override."
+    },
+    "pack_size_range": {
+      "$ref": "_common.schema.json#/$defs/IntegerRange",
+      "description": "How many of this template spawn together (1-1 for solitary; 3-8 for pack animals)."
+    },
+    "appearance_variations": {
+      "type": "object",
+      "properties": {
+        "scenes": {
+          "type": "array",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "models": {
+          "type": "array",
+          "items": { "$ref": "_common.schema.json#/$defs/AssetRef" }
+        },
+        "scale_range": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+      },
+      "additionalProperties": false
+    },
+    "sounds": {
+      "type": "object",
+      "properties": {
+        "idle": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+        "alert": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+        "attack": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+        "death": { "$ref": "_common.schema.json#/$defs/AssetRef" }
+      },
+      "additionalProperties": false
+    },
+    "respawns": { "type": "boolean", "default": true },
+    "tags": {
+      "type": "array",
+      "description": "Optional informal tags. See wildlife.schema.json tags documentation.",
+      "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+      "uniqueItems": true
+    }
+  },
+  "required": ["id", "display_name", "species", "category", "diet", "aggression", "behavior_tree", "biome_affinity", "spawn_density"],
+  "additionalProperties": false
+}

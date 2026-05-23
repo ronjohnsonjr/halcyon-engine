@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/tool_calls.schema.json",
+  "title": "Tool Calls Registry File (tool_calls.json)",
+  "description": "Schema for the tool calls registry. Per ADR-0011, NPCs emit allowlisted tool calls that the engine validates and executes. This file declares every tool call's signature: parameters, types, what state it mutates, what events it emits. The engine matches NPC allowlist entries against this registry.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/ToolCall"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ToolCall": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "description": "Designer-facing description. Also included in the LLM prompt as documentation for what this tool does.",
+          "maxLength": 512
+        },
+        "category": {
+          "type": "string",
+          "enum": ["affinity", "dialogue", "trade", "combat", "faction", "lore", "spatial", "narrative"]
+        },
+        "parameters": {
+          "type": "array",
+          "description": "Parameters the LLM must supply when emitting this tool call. The engine validates each parameter type at runtime before executing.",
+          "items": {
+            "$ref": "#/$defs/Parameter"
+          }
+        },
+        "state_mutations": {
+          "type": "array",
+          "description": "Categories of state this tool call can mutate. Used for replay analysis, audit, and conflict detection in multiplayer. Empty array means side-effect-free.",
+          "items": {
+            "type": "string",
+            "enum": ["npc_affinity", "npc_relationships", "player_inventory", "world_events", "sub_faction_state", "tile_state", "quest_state"]
+          },
+          "uniqueItems": true
+        },
+        "emits_event_type": {
+          "type": "string",
+          "description": "Optional event type emitted to the shared event log when this tool call executes. Storylets can match against the event type."
+        },
+        "guard_against_injection": {
+          "type": "boolean",
+          "default": true,
+          "description": "If true, the engine validates that the LLM's stated reason for this tool call matches actual game state. Mitigates the Where Winds Meet narrative injection class of exploits. Per ADR-0011."
+        },
+        "rate_limit_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 60,
+          "description": "Per-NPC rate limit. Prevents the LLM from spamming a tool call."
+        },
+        "cooldown_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Per-NPC cooldown between calls. Higher than rate_limit for narratively-significant calls."
+        }
+      },
+      "required": ["display_name", "category", "parameters", "state_mutations"],
+      "additionalProperties": false
+    },
+    "Parameter": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "_common.schema.json#/$defs/Identifier"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "integer", "number", "boolean", "reference_urn", "runtime_reference_urn", "enum"]
+        },
+        "required": {
+          "type": "boolean",
+          "default": true
+        },
+        "enum_values": {
+          "type": "array",
+          "description": "Required when type is 'enum'. The allowed string values.",
+          "items": { "type": "string" }
+        },
+        "urn_kinds": {
+          "type": "array",
+          "description": "Required when type is 'reference_urn' or 'runtime_reference_urn'. Allowed URN kinds (e.g., ['item', 'block']).",
+          "items": { "type": "string" }
+        },
+        "range": {
+          "$ref": "_common.schema.json#/$defs/NumberRange",
+          "description": "Optional. Required for integer or number parameters with bounded values."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 256
+        }
+      },
+      "required": ["name", "type"],
+      "additionalProperties": false
+    }
+  }
+}

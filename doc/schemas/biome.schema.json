@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/biome.schema.json",
+  "title": "Biomes Registry File (biomes.json)",
+  "description": "Schema for the biomes registry. Per ADR-0005. The biomes.json file maps biome ids to biome definitions. Each Hex Tile (per ADR-0010) is assigned a biome at world generation; the biome drives terrain block distribution, native wildlife, weather, and storylet preconditions.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Biome"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Biome": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "climate_band": {
+          "type": "string",
+          "enum": ["polar", "boreal", "temperate", "subtropical", "tropical", "arid", "void_blighted"],
+          "description": "Macro climate. Polar and boreal cluster at high latitudes; tropical at low. Void_blighted is a cosmic-horror corruption state, climate-independent."
+        },
+        "elevation_band": {
+          "type": "string",
+          "enum": ["ocean", "coast", "lowland", "hills", "highland", "mountain", "peak", "underground"],
+          "description": "Altitude category. Used by SubFaction.placement_rules altitude_band."
+        },
+        "moisture_level": {
+          "type": "string",
+          "enum": ["arid", "dry", "moderate", "wet", "saturated"]
+        },
+        "terrain_features": {
+          "type": "array",
+          "description": "Notable surface features. Used by world-gen for chunk content.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "dense_forest", "open_woodland", "grassland", "savanna", "desert", "tundra",
+              "marsh", "swamp", "river_valley", "lake", "coast", "cliff", "canyon",
+              "volcanic", "icefield", "ash_plain", "ruined_city", "ancient_battlefield",
+              "cosmic_scar", "void_breach"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "block_distribution": {
+          "type": "array",
+          "description": "Blocks that generate in this biome with relative weights. Used by terrain generation.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "block": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "weight": { "type": "number", "minimum": 0 },
+              "layer": {
+                "type": "string",
+                "enum": ["surface", "subsurface", "deep", "underground", "vegetation", "decoration"]
+              }
+            },
+            "required": ["block", "weight", "layer"],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "wildlife_templates_native": {
+          "type": "array",
+          "description": "Wildlife templates that spawn naturally in this biome.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "template": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "spawn_weight": { "type": "number", "minimum": 0 },
+              "density_per_tile": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+            },
+            "required": ["template", "spawn_weight"],
+            "additionalProperties": false
+          }
+        },
+        "npc_template_eligibility": {
+          "type": "array",
+          "description": "Procgen NPC templates whose drives and personality fit this biome (e.g., desert nomad templates fit arid biomes).",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "weather_patterns": {
+          "type": "array",
+          "description": "Weather conditions that can occur. Used by WeatherQuery.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "weather": {
+                "type": "string",
+                "enum": ["clear", "rain", "snow", "fog", "storm", "blood_moon", "void_aurora"]
+              },
+              "frequency": { "$ref": "_common.schema.json#/$defs/ProbabilityWeight" },
+              "seasons": {
+                "type": "array",
+                "items": { "type": "string", "enum": ["spring", "summer", "autumn", "winter"] }
+              }
+            },
+            "required": ["weather", "frequency"],
+            "additionalProperties": false
+          }
+        },
+        "cosmic_horror_susceptibility": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "How prone this biome is to cosmic-horror incursions. Higher values bias spawn rules toward cosmic-horror manifestations. Deep underground biomes and void_blighted have high values; settled lowlands have low values."
+        },
+        "ambient": {
+          "type": "object",
+          "description": "Atmospheric properties for rendering and audio.",
+          "properties": {
+            "sky_color": { "type": "string", "description": "Hex color, e.g., '#87CEEB'." },
+            "fog_color": { "type": "string" },
+            "fog_density": { "type": "number", "minimum": 0, "maximum": 1 },
+            "ambient_sound": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "music_track": { "$ref": "_common.schema.json#/$defs/AssetRef" }
+          },
+          "additionalProperties": false
+        },
+        "movement_modifier": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1,
+          "description": "Multiplier on player and NPC movement speed in this biome. Values less than 1 indicate difficult terrain (deep snow 0.6, swamp 0.5)."
+        },
+        "temperature_range_celsius": {
+          "$ref": "_common.schema.json#/$defs/NumberRange",
+          "description": "Used for survival mechanics (frostbite, heatstroke)."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Optional informal tags.",
+          "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+          "uniqueItems": true
+        }
+      },
+      "required": ["display_name", "climate_band", "elevation_band", "moisture_level", "terrain_features", "block_distribution"],
+      "additionalProperties": false
+    }
+  }
+}

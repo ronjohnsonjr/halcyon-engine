@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/storylet.schema.json",
+  "title": "Storylets Registry File (storylets.json)",
+  "description": "Schema for the storylets registry. Per ADR-0013, storylets are stored in a single Registry File. Simple storylets are pure data inline. Complex storylets escape to scripts and content files via {script: ...} or {file: ...} references. Storylets read world state via typed precondition queries, score via salience expressions or scripts, and emit effects.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Storylet"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Storylet": {
+      "type": "object",
+      "description": "A single storylet entry.",
+      "properties": {
+        "tier": {
+          "type": "string",
+          "enum": ["Major", "Minor", "Flavor"],
+          "description": "Storylet tier. Major (rare, dramatic, multi-act), Minor (frequent, medium-impact), Flavor (ambient, common, low-impact). Per the Fractal Philosophy salience-tier convention."
+        },
+        "preconditions": {
+          "type": "array",
+          "description": "Queries that must all be true for this storylet to be eligible per narrative tick. Each query is validated against storylet_queries.schema.json#/$defs/Query.",
+          "items": { "$ref": "storylet_queries.schema.json#/$defs/Query" },
+          "minItems": 0,
+          "maxItems": 16
+        },
+        "salience": {
+          "description": "Inline expression (string, evaluated against the runtime world-state namespace per _common.schema.json#/$defs/RuntimeExpression) OR a script reference for complex salience computation.",
+          "oneOf": [
+            { "$ref": "_common.schema.json#/$defs/RuntimeExpression" },
+            { "$ref": "_common.schema.json#/$defs/ScriptRef" }
+          ]
+        },
+        "effects": {
+          "description": "Inline declarative effect list OR a script reference for complex effects.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": { "$ref": "storylet_effects.schema.json#/$defs/Effect" },
+              "maxItems": 32
+            },
+            { "$ref": "_common.schema.json#/$defs/ScriptRef" }
+          ]
+        },
+        "content": {
+          "description": "Inline content string OR a file reference for longer content.",
+          "oneOf": [
+            { "type": "string", "minLength": 1, "maxLength": 4096 },
+            { "$ref": "_common.schema.json#/$defs/FileRef" }
+          ]
+        },
+        "cooldown": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum time before this storylet can fire again."
+        },
+        "cooldown_unit": {
+          "type": "string",
+          "enum": ["in_game_seconds", "in_game_minutes", "in_game_hours", "in_game_days", "in_game_years"],
+          "description": "Unit for the cooldown value."
+        }
+      },
+      "required": ["tier", "preconditions", "salience", "effects", "content", "cooldown", "cooldown_unit"],
+      "additionalProperties": false
+    }
+  }
+}

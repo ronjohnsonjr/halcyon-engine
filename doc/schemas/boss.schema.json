@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/boss.schema.json",
+  "title": "Boss Entity Directory (bosses/<id>/data.json)",
+  "description": "Schema for authored Boss archetypes per the Project Halcyon design doc. Bosses tier 1-5: T1 early Void-Touched, T2 faction-political Sundered Champions, T3 Regional Wall-of-Flesh (~1 per major biome), T4 Faction-defining, T5 cosmic Endgame. Each archetype admits multiple Resolution Paths (combat, negotiation, cosmological puzzle, bargained-into-priesthood). Defeating a Tier 3+ boss permanently changes regional world state and grants a chooseable Boss-Defeat Enhancement.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96
+    },
+    "tier": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Boss Tier. 1: Early Void-Touched. 2: Faction-political. 3: Regional Wall-of-Flesh. 4: Faction-defining. 5: Cosmic Endgame."
+    },
+    "archetype_role": {
+      "type": "string",
+      "maxLength": 96,
+      "description": "Conceptual role this archetype fills (e.g., 'sundered_hold', 'veiled_sleeper', 'quietist_avatar', 'void_predator', 'corrupted_tesla_relic'). Used by world-gen to ensure tier-appropriate variety per playthrough."
+    },
+    "biome_affinity": {
+      "type": "array",
+      "description": "Biomes where this boss is plausibly placed at world gen. Empty means biome-agnostic (T4+ bosses often span biomes).",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+    },
+    "macro_faction_affinity": {
+      "type": "array",
+      "description": "Macro Factions whose territory or domain this boss intersects. Used for Resolution Path impact (defeating a Sundered Veranthi Court Sorcerer changes Veranthi relations).",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+    },
+    "combat_profile": {
+      "type": "object",
+      "description": "Combat statistics if combat is one of the Resolution Paths. Optional for non-combat-only bosses (the Unblinking Eye archetype, certain Tier 4 negotiation-only encounters).",
+      "properties": {
+        "max_health": { "type": "integer", "minimum": 1 },
+        "damage": { "type": "number", "minimum": 0 },
+        "damage_type": {
+          "type": "string",
+          "enum": ["physical", "fire", "cold", "lightning", "poison", "magical", "void"]
+        },
+        "armor": { "type": "number", "minimum": 0 },
+        "magic_resistance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "tech_resistance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "speed": { "type": "number", "minimum": 0 },
+        "behavior_tree": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+      },
+      "additionalProperties": false
+    },
+    "resolution_paths": {
+      "type": "array",
+      "description": "Per the design doc, each boss admits multiple Resolution Paths. Not every boss is killable. Some are changeable, not destroyable (the Veiled Sleeper archetype is the canonical example).",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "path_type": {
+            "type": "string",
+            "enum": ["combat", "negotiation", "cosmological_puzzle", "bargain", "ritual"],
+            "description": "combat: defeat in fight. negotiation: dialogue + reputation thresholds. cosmological_puzzle: use specific artifact or perform counter-ritual. bargain: become its priest or accept its terms. ritual: separate from puzzle, structured group ritual on-site."
+          },
+          "prerequisites": {
+            "type": "array",
+            "description": "Free-form precondition descriptors (artifact possession, faction standing, Drift band, etc.). The Storyteller and quest system validate these at engagement time.",
+            "items": { "type": "string", "maxLength": 256 }
+          },
+          "outcome_world_state_changes": {
+            "type": "array",
+            "description": "Permanent regional world-state changes triggered by this resolution path. Different paths produce different outcomes (combat-defeating the Veiled Sleeper may not be possible; bargaining with it makes the player a serpent-priest).",
+            "items": { "type": "string", "maxLength": 256 }
+          }
+        },
+        "required": ["path_type"],
+        "additionalProperties": false
+      }
+    },
+    "biome_clear_effect": {
+      "type": "string",
+      "maxLength": 512,
+      "description": "Tier 3+ bosses cleanse or otherwise transform their biome on defeat (per the design doc). E.g., 'lowers Sundering rate in karnish_pine_forest by 80% for the playthrough', 'opens new resource node X in sethrai_river_delta'."
+    },
+    "defeat_enhancement_options": {
+      "type": "array",
+      "description": "Tier 3+ bosses grant a chooseable Boss-Defeat Enhancement. Player picks one of several rewards per defeated boss. Like Valheim's Forsaken Powers but with multiple-choice rather than fixed.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "display_name": { "type": "string", "maxLength": 96 },
+          "description": { "type": "string", "maxLength": 512 },
+          "enhancement_type": {
+            "type": "string",
+            "enum": ["drift_decay_bonus", "active_ability", "unlock_recipe", "unlock_resonance_web_node", "faction_standing_shift", "knowledge_unlock", "stat_passive"]
+          }
+        },
+        "required": ["display_name", "enhancement_type"],
+        "additionalProperties": false
+      }
+    },
+    "lore": {
+      "type": "string",
+      "maxLength": 8192
+    },
+    "scene": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Scene URN for the boss encounter (terrain, ambient cosmology, set dressing)."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+      "uniqueItems": true
+    }
+  },
+  "required": ["id", "display_name", "tier", "archetype_role", "resolution_paths"],
+  "additionalProperties": false
+}

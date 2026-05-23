@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/sub_faction.schema.json",
+  "title": "SubFaction Authored Instance",
+  "description": "Schema for a hand-authored sub_faction instance. Per ADR-0014 (authored vs template), ADR-0015 (4-variable Turchin simulation). Manifest stores initial state; runtime state lives in the world DB. Lives in sub_factions/<sub_faction_id>/data.json.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "_common.schema.json#/$defs/Identifier",
+      "description": "Matches the parent directory name."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Player-facing sub_faction name (e.g., 'Kingdom of Aquilonia')."
+    },
+    "founding_template": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Optional. sub_faction_template:* URN this sub_faction is a variant of. The sub_faction inherits template defaults for fields not specified here."
+    },
+    "macro_faction": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Required. macro_faction:* URN this Sub-Faction belongs to. Per the Project Halcyon design doc, every Sub-Faction belongs to exactly one Macro Faction. Sub-Faction state rolls up into macro-level state via the macro's rollup_strategy."
+    },
+    "culture": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Required. culture:* URN. Drives default Turchin coefficients, NPC personality patterns, name generation tables, religious affiliations. Usually matches the parent Macro's culture; may diverge for splinter or multi-cultural sub-factions."
+    },
+    "initial_state": {
+      "type": "object",
+      "description": "Initial values for the 6-parameter Sub-Faction State Vector per ADR-0020 (supersedes ADR-0015's 4-variable Turchin model). Adapted from the Dynamic Factions mod with Turchin/Khaldun structural-demographic framing. All six parameters are required at world start; the Storyteller and Tick Rate schedule update them over play.",
+      "properties": {
+        "cohesion": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Internal solidarity, [0,1]. The asabiyyah/elite-and-population-bond axis. High cohesion resists strain; low cohesion lets internal Strain Events fire freely. Ticks per game-day."
+        },
+        "reach": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Geographic and political projection, [0,1]. Determines Influence Zone radius around Settlement Points; affects trade range and military projection. Ticks per game-week."
+        },
+        "mandate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Legitimacy of leadership, [0,1]. Decays on illegitimating events (failed wars, broken vows, succession crises); restored by legitimating events. Event-driven only; no scheduled tick."
+        },
+        "martial_power": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Military capability, [0,1]. Determines war outcomes, raid success, defensive holding. Ticks per game-week."
+        },
+        "defensive_posture": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fortification and readiness, [0,1]. Modifies attacker cost when settlements are besieged. Event-driven only (fortification projects, settlement captures, ally turnover)."
+        },
+        "strain": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Internal pressure, [0,1]. Rises with poor cohesion, poor mandate, unmet population needs, refugee influx, etc. Crossing thresholds fires Strain Events (succession crises, peasant revolts, religious schisms, leadership coups, mass defections, court purges). Ticks per game-day."
+        },
+        "treasury": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Accumulated state surplus in abstract resource units. Auxiliary state outside the State Vector proper; used for diplomatic gift-giving budgets, mercenary hiring, fortification projects, and famine-relief reserves."
+        }
+      },
+      "required": ["cohesion", "reach", "mandate", "martial_power", "defensive_posture", "strain"],
+      "additionalProperties": false
+    },
+    "initial_tile_assignment": {
+      "type": "object",
+      "description": "How initial hex tile ownership is determined at world generation.",
+      "oneOf": [
+        {
+          "properties": {
+            "explicit_tiles": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 0 },
+              "description": "Explicit hex tile id array. Used when the sub_faction has fixed geography."
+            }
+          },
+          "required": ["explicit_tiles"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "criteria": {
+              "type": "object",
+              "properties": {
+                "biome_preference": {
+                  "type": "array",
+                  "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+                },
+                "latitude_band": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+                "altitude_band": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+                "tile_count": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+                "contiguous": { "type": "boolean", "default": true }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": ["criteria"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ruler": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Initial ruler. May be npc:* (a specifically-authored named character that always exists at world start) or npc_template:* (a template that procgen-instantiates a unique ruler at world creation, named per the template's name_patterns)."
+    },
+    "heir": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Optional. Initial heir. npc:*, npc_template:*, or omitted (no heir at world start)."
+    },
+    "named_npcs": {
+      "type": "array",
+      "description": "Authored NPCs that exist within this sub_faction at world start (advisors, generals, scholars, etc.).",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "maxItems": 64
+    },
+    "npc_templates_used": {
+      "type": "array",
+      "description": "NPC templates that procedurally populate this sub_faction (villagers, soldiers, merchants).",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+    },
+    "coefficient_overrides": {
+      "type": "object",
+      "description": "Overrides for the Turchin ODE coefficients. Defaults come from the culture. Per ADR-0015.",
+      "properties": {
+        "asabiyyah_gain_rate": { "type": "number" },
+        "asabiyyah_decay_rate": { "type": "number" },
+        "elite_reproduction_rate": { "type": "number" },
+        "state_overhead_beta": { "type": "number" },
+        "tax_efficiency_rho": { "type": "number" },
+        "carrying_capacity_coupling": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "lore": {
+      "type": "string",
+      "description": "Freeform lore text. Consumed by storylets and dialogue generation. Not parsed by the engine.",
+      "maxLength": 16384
+    }
+  },
+  "required": ["id", "display_name", "macro_faction", "culture", "initial_state", "initial_tile_assignment", "ruler"],
+  "additionalProperties": false
+}

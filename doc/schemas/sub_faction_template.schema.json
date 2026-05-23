@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/sub_faction_template.schema.json",
+  "title": "SubFaction Template",
+  "description": "Schema for a procgen sub_faction template. Per ADR-0014. World generation instantiates this template multiple times to produce procgen sub_factions (e.g., 'warring_kingdom' might produce 3-5 instances per world). Lives in sub_faction_templates/<template_id>/data.json.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "_common.schema.json#/$defs/Identifier",
+      "description": "Matches the parent directory name."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Designer-facing template name (e.g., 'Warring Kingdom')."
+    },
+    "name_patterns": {
+      "type": "object",
+      "description": "Procedural name generation for sub_faction instances. The {name} placeholder in title_format receives the sub_faction name produced by sampling the culture's sub_faction_name_patterns.",
+      "properties": {
+        "pattern": {
+          "allOf": [{ "$ref": "_common.schema.json#/$defs/SubstitutionPattern" }],
+          "description": "Optional override. Generative pattern using {family_name}, {place_root}, etc. drawn from the sub_faction's culture name tables. If omitted, the culture's sub_faction_name_patterns are used directly."
+        },
+        "title_format": {
+          "allOf": [{ "$ref": "_common.schema.json#/$defs/SubstitutionPattern" }],
+          "description": "Display-name format. Available placeholder: {name} (the sampled sub_faction name). Examples: 'Kingdom of {name}', 'The Free Cities of {name}', '{name} Conclave'."
+        }
+      },
+      "additionalProperties": false
+    },
+    "culture": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Default culture URN. Individual instances may pick from a list if multiple cultures fit this template."
+    },
+    "culture_pool": {
+      "type": "array",
+      "description": "Optional. Pool of culture URNs to sample from. Overrides 'culture' if present. A pool with a single entry is valid (semantically identical to setting 'culture' to that entry).",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "minItems": 1
+    },
+    "initial_state_ranges": {
+      "type": "object",
+      "description": "Sampled ranges for initial Sub-Faction State Vector parameters per ADR-0020. Each instance draws values from these ranges at world generation.",
+      "properties": {
+        "cohesion": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "reach": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "mandate": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "martial_power": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "defensive_posture": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "strain": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "treasury": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+      },
+      "required": ["cohesion", "reach", "mandate", "martial_power", "defensive_posture", "strain"],
+      "additionalProperties": false
+    },
+    "placement_rules": {
+      "type": "object",
+      "description": "Where instances of this template are placed at world gen.",
+      "properties": {
+        "biome_preference": {
+          "type": "array",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "biome_avoidance": {
+          "type": "array",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "latitude_band": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "min_distance_from_other_sub_factions_tiles": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum tile-graph distance from other sub_factions at world gen."
+        },
+        "size_range": {
+          "$ref": "_common.schema.json#/$defs/IntegerRange",
+          "description": "Tile count range per instance."
+        }
+      },
+      "required": ["size_range"],
+      "additionalProperties": false
+    },
+    "count_at_world_gen": {
+      "$ref": "_common.schema.json#/$defs/IntegerRange",
+      "description": "How many instances of this template to generate per world."
+    },
+    "ruler_template": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "NPC template used to generate the ruler. Each sub_faction instance gets a procgen ruler from this template."
+    },
+    "npc_templates_used": {
+      "type": "array",
+      "description": "NPC templates that procedurally populate instances of this sub_faction.",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+    },
+    "coefficient_overrides": {
+      "type": "object",
+      "description": "Overrides for Turchin coefficients. Defaults come from the culture.",
+      "properties": {
+        "asabiyyah_gain_rate": { "type": "number" },
+        "asabiyyah_decay_rate": { "type": "number" },
+        "elite_reproduction_rate": { "type": "number" },
+        "state_overhead_beta": { "type": "number" },
+        "tax_efficiency_rho": { "type": "number" },
+        "carrying_capacity_coupling": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "typical_relationships": {
+      "type": "array",
+      "description": "Default attitudes toward other sub_faction templates. Procgen instances inherit these as baseline.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "toward_template": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+          "attitude": {
+            "type": "string",
+            "enum": ["hostile", "rival", "neutral", "wary", "friendly", "allied"]
+          }
+        },
+        "required": ["toward_template", "attitude"],
+        "additionalProperties": false
+      }
+    },
+    "lore_pattern": {
+      "allOf": [{ "$ref": "_common.schema.json#/$defs/SubstitutionPattern" }],
+      "description": "Templated lore prose. Available placeholders: {ruler_name} (the procgen ruler's display_name), {capital_name} (procgen capital or first tile name), {founding_year} (sampled int from world_gen), {name} (the sub_faction's sampled name). Defaults to culture-driven lore generation if omitted."
+    },
+    "pentagon_seeding_template": {
+      "type": "object",
+      "description": "Per ADR-0018. Optional Pentagon-specific overrides for when this sub_faction template is selected to seed a Pentagon Site. If a culture is procgen-selected for a Pentagon Site and this template applies, world-gen uses these overrides instead of generic frontier sub_faction generation. Lets a culture express what its Pentagon-seeded sub_faction specifically looks like (size, ruler template, named NPCs at the canonical site, lore pattern).",
+      "properties": {
+        "size_range_override": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "integer", "minimum": 1 },
+            "max": { "type": "integer", "minimum": 1 }
+          },
+          "additionalProperties": false
+        },
+        "ruler_template_override": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "Optional npc_template URN to use as the ruler when seeded at a Pentagon (e.g., a more legendary ruler than the generic frontier template would produce)."
+        },
+        "named_npcs": {
+          "type": "array",
+          "description": "Authored named NPC URNs that exist at this Pentagon-seeded sub_faction (the canonical site lore characters).",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+          "uniqueItems": true
+        },
+        "lore_pattern_override": {
+          "allOf": [{ "$ref": "_common.schema.json#/$defs/SubstitutionPattern" }],
+          "description": "Optional lore pattern override for Pentagon-seeded sub_factions (typically referencing the Pentagon as the ancestral seat)."
+        },
+        "initial_state_overrides": {
+          "type": "object",
+          "description": "Optional State Vector overrides for the Pentagon-seeded variant (e.g., higher cohesion and mandate to reflect a founding capital). Per ADR-0020.",
+          "properties": {
+            "cohesion": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+            "reach": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+            "mandate": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+            "martial_power": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+            "defensive_posture": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+            "strain": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+            "treasury": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "display_name", "initial_state_ranges", "placement_rules", "count_at_world_gen", "ruler_template"],
+  "additionalProperties": false,
+  "anyOf": [
+    { "required": ["culture"] },
+    { "required": ["culture_pool"] }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/tesla_core.schema.json",
+  "title": "Tesla Cores Registry File (tesla_cores.json)",
+  "description": "Schema for the Tesla Cores registry per the Project Halcyon design doc. Tesla Cores are irreplaceable components that gate Tesla device assembly. Three grades (Standard, Refined, Architect). Total cores per playthrough are capped by procgen world budget; the Core Acquisition Pathway has five tiers to ensure no soft-lock. An optional Manufacturing Mode (off-by-default at game start, or unlockable via deep Engineer arc) enables late-game manufacture from rare materials.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/TeslaCore"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "TeslaCore": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "grade": {
+          "type": "string",
+          "enum": ["standard", "refined", "architect"],
+          "description": "Tesla Core grade. Standard: basic Tesla devices, most plentiful per playthrough budget. Refined: mid-tier devices, scarcer. Architect: top-tier and Resonance Web integration; vanishingly rare, may be capped at ~1-3 per playthrough."
+        },
+        "salvageable_from": {
+          "type": "array",
+          "description": "Sources where this core can be acquired per the design doc's Core Acquisition Pathway. The Storyteller fires fallback events if the player's pool is too small to progress.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "halcyon_wreckage",
+              "voidship_relic_site",
+              "boss_drop",
+              "trade_with_sethrai",
+              "ruined_polity_loot",
+              "interference_zone_recovery",
+              "manufactured"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "world_budget_range": {
+          "$ref": "_common.schema.json#/$defs/IntegerRange",
+          "description": "Procgen budget: how many of this core grade may exist in a given playthrough. world_gen budget rules cap and distribute these across the salvageable_from sources."
+        },
+        "manufacturable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this core can be crafted at all if Manufacturing Mode is on. Standard grade typically true; Architect typically false."
+        },
+        "manufacture_recipe": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "Optional recipe URN. Required if manufacturable is true. The recipe is gated behind a Knowledge Unlock; per the design doc, the recipe is deliberately expensive (rare materials including Karnish bloodline stone, Sethrai memorial silver, Heart-Class fragment per core) to preserve scarcity feel even with Manufacturing Mode on."
+        },
+        "drift_on_use": {
+          "type": "object",
+          "description": "Drift accumulation per use when this core powers a device. Per the Drift Accumulation Curve, this is the baseline cost before band scaling.",
+          "properties": {
+            "resonance_per_use": { "type": "number", "minimum": 0 },
+            "null_per_use": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "weight": { "type": "number", "minimum": 0, "description": "Item weight in grams." },
+        "tags": {
+          "type": "array",
+          "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+          "uniqueItems": true
+        }
+      },
+      "required": ["display_name", "grade", "salvageable_from", "world_budget_range"],
+      "additionalProperties": false
+    }
+  }
+}

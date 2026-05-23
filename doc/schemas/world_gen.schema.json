@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/world_gen.schema.json",
+  "title": "World Generation Configuration (world_gen.json)",
+  "description": "Schema for the top-level world generation configuration. A single JSON file at project root that drives how new worlds are seeded: planet geometry per ADR-0010 (Goldberg sim overlay) and ADR-0017 (cube-sphere voxel substrate), biome distribution, sub_faction instantiation per ADR-0014, Pentagon Site assignment, and player spawn placement.",
+  "type": "object",
+  "properties": {
+    "planet": {
+      "type": "object",
+      "description": "Planet geometry. Per ADR-0017, the planet has a dual structure: a cube-sphere voxel substrate where blocks live, and a Goldberg hex-sphere sim overlay where sub_factions and biomes are scoped. The two are rotated so 8 cube corners coincide with 8 of 12 Goldberg pentagons (creating 12 Pentagon Sites).",
+      "properties": {
+        "sim_overlay": {
+          "type": "object",
+          "description": "Goldberg hex-sphere parameters (sim overlay) per ADR-0010 amended by ADR-0017. MVP default is G(4,0).",
+          "properties": {
+            "subdivision_m": { "type": "integer", "minimum": 1, "maximum": 30 },
+            "subdivision_n": { "type": "integer", "minimum": 0, "maximum": 30 }
+          },
+          "required": ["subdivision_m", "subdivision_n"],
+          "additionalProperties": false
+        },
+        "voxel_substrate": {
+          "type": "object",
+          "description": "Cube-sphere voxel substrate parameters per ADR-0017.",
+          "properties": {
+            "projection": {
+              "type": "string",
+              "enum": ["asc", "spherified_cube", "cobe_qsc"],
+              "default": "asc",
+              "description": "Cube-to-sphere projection. ASC (Adjusted Spherical Cube, Dimitrijević 2016) is the recommended default; spherified_cube is the simpler Catlike-Coding formula; cobe_qsc is the equal-area NASA projection."
+            },
+            "chunk_size_voxels": { "type": "integer", "default": 32, "enum": [16, 32, 64] },
+            "shell_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16,
+              "default": 4,
+              "description": "Number of concentric voxel shells from the surface to the core. Each shell subdivides toward the center to keep voxel proportions reasonable."
+            },
+            "min_core_voxel_size_meters": {
+              "type": "number",
+              "minimum": 0.01,
+              "default": 0.5,
+              "description": "Minimum voxel edge length at the innermost shell. Below this depth the core is hollow."
+            }
+          },
+          "required": ["projection"],
+          "additionalProperties": false
+        },
+        "radius_meters": {
+          "type": "number",
+          "minimum": 1000,
+          "maximum": 100000,
+          "default": 6000,
+          "description": "Planet radius. ADR-0017 default is 6000 m (~37.7 km circumference, ~7.5 hours to circumnavigate at walking speed). Smaller radii produce more visible cube-edge dihedral kinks; larger radii spread content thin."
+        },
+        "axial_tilt_degrees": { "type": "number", "minimum": 0, "maximum": 90, "default": 23.5 },
+        "rotation_period_hours": { "type": "number", "minimum": 1, "default": 24 },
+        "year_length_days": { "type": "integer", "minimum": 4, "default": 360 },
+        "pentagon_site_assignment": {
+          "type": "object",
+          "description": "Authored or procgen assignment of the 12 Pentagon Sites (per ADR-0017). 8 Corner Pentagons (cube corners) default to cosmic-horror eruption points; 4 Face-Center Pentagons (cube face centers) default to civilizational seed sites.",
+          "properties": {
+            "corner_pentagons": {
+              "type": "array",
+              "description": "Authored overrides for the 8 Corner Pentagon assignments. Order corresponds to cube corner ids 0-7. Entries may reference cosmic-horror site templates or be left blank for procgen default.",
+              "minItems": 0,
+              "maxItems": 8,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "corner_id": { "type": "integer", "minimum": 0, "maximum": 7 },
+                  "site_template": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+                  "lore_name": { "type": "string", "maxLength": 128 }
+                },
+                "required": ["corner_id"],
+                "additionalProperties": false
+              }
+            },
+            "face_center_pentagons": {
+              "type": "array",
+              "description": "Authored overrides for the 4 Face-Center Pentagon assignments. cube_face_id is one of the 6 cube faces (0-5); only 4 of 6 have pentagon coincidence (the other 2 are unmarked).",
+              "minItems": 0,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "cube_face_id": { "type": "integer", "minimum": 0, "maximum": 5 },
+                  "seed_culture": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+                  "seed_sub_faction": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+                  "lore_name": { "type": "string", "maxLength": 128 }
+                },
+                "required": ["cube_face_id"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["sim_overlay", "voxel_substrate", "radius_meters"],
+      "additionalProperties": false
+    },
+    "default_seed": {
+      "type": "string",
+      "description": "Default seed string for new worlds. Players may override at world creation. The seed deterministically produces the same world (same tile assignments, same sub_faction placements, same procgen NPCs) given the same Manifest version.",
+      "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+    },
+    "biome_assignment": {
+      "type": "object",
+      "description": "How biomes are assigned to hex tiles.",
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["latitude_climate", "voronoi_seed", "noise_based", "manual"],
+          "description": "latitude_climate: biomes follow climate bands by latitude with noise variation. voronoi_seed: biome seeds placed and tiles assigned to nearest seed. noise_based: pure noise function. manual: tiles assigned in this file."
+        },
+        "noise_seed_offset": { "type": "integer", "default": 0 },
+        "climate_band_breakpoints": {
+          "type": "array",
+          "description": "Latitude breakpoints in degrees (from equator at 0 to pole at 90) defining climate transitions.",
+          "items": { "type": "number", "minimum": 0, "maximum": 90 },
+          "minItems": 0
+        },
+        "biome_pool": {
+          "type": "array",
+          "description": "Biomes available for placement on this planet.",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+          "minItems": 1
+        }
+      },
+      "required": ["strategy", "biome_pool"],
+      "additionalProperties": false
+    },
+    "sub_faction_generation": {
+      "type": "object",
+      "description": "How sub_factions are instantiated at world gen. Combines authored sub_factions (always placed) with procgen instances from templates.",
+      "properties": {
+        "authored_sub_factions": {
+          "type": "array",
+          "description": "Authored sub_faction URNs to place at world generation. Each is required to exist at world start.",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "procgen_sub_factions": {
+          "type": "array",
+          "description": "SubFaction templates to instantiate. Counts and placement rules per template.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "template": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "count_override": {
+                "$ref": "_common.schema.json#/$defs/IntegerRange",
+                "description": "Optional. Overrides the template's own count_at_world_gen."
+              }
+            },
+            "required": ["template"],
+            "additionalProperties": false
+          }
+        },
+        "unclaimed_tile_target_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.2,
+          "description": "Approximate fraction of total tiles to leave unclaimed by any sub_faction. Reserved for wilderness and cosmic-horror sites."
+        }
+      },
+      "required": ["unclaimed_tile_target_fraction"],
+      "additionalProperties": false
+    },
+    "pentagon_seeding": {
+      "type": "object",
+      "description": "Per ADR-0018. Controls how the 12 Pentagon Sites are filled at world generation by sampling from the available culture pool, constrained by per-culture pentagon_eligibility declarations. Authored pinnings in planet.pentagon_site_assignment take precedence; this block governs procgen for the remaining Pentagon slots.",
+      "properties": {
+        "face_center_pool_strategy": {
+          "type": "string",
+          "enum": ["founding_only", "founding_with_ruined_fallback", "ruined_only"],
+          "default": "founding_with_ruined_fallback",
+          "description": "How to fill Face-Center Pentagons. founding_only: sample only from cultures tagged 'founding'; emit warning if pool < 4 and leave excess slots as wilderness Wonder Regions. founding_with_ruined_fallback: prefer 'founding' cultures, fall back to 'ruined' tagged cultures (creating world-start ruins) when the founding pool is exhausted. ruined_only: every Face-Center Pentagon is a fallen sub_faction ruin."
+        },
+        "corner_pool_strategy": {
+          "type": "string",
+          "enum": ["corrupt_only", "corrupt_with_procgen_fallback"],
+          "default": "corrupt_with_procgen_fallback",
+          "description": "How to fill Corner Pentagons. corrupt_only: sample only from cultures tagged 'corrupt'; emit warning if pool < 8 and leave excess slots as unanchored procedural cosmic-horror sites. corrupt_with_procgen_fallback: use 'corrupt' cultures where available, generate procedural cosmic-horror sites (no anchored culture) for the rest."
+        },
+        "pentagon_overrides": {
+          "type": "array",
+          "description": "Optional hard-pinned culture assignments for specific Pentagon Sites. Overrides the procgen sampling for the named Pentagon. Pentagon ids: 'corner_0' through 'corner_7' for Corner Pentagons; 'face_center_0' through 'face_center_3' for Face-Center Pentagons. These take precedence over the pool strategies. Equivalent functionality to planet.pentagon_site_assignment entries; either may be used.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pentagon_id": {
+                "type": "string",
+                "pattern": "^(corner_[0-7]|face_center_[0-3])$"
+              },
+              "culture": {
+                "$ref": "_common.schema.json#/$defs/ReferenceURN",
+                "description": "Culture URN to seed at this Pentagon Site. Culture must have a pentagon_eligibility compatible with the Pentagon's class (founding/ruined for Face-Center, corrupt for Corner)."
+              }
+            },
+            "required": ["pentagon_id", "culture"],
+            "additionalProperties": false
+          },
+          "uniqueItems": true
+        },
+        "max_pentagons_per_culture": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Maximum number of Pentagon Sites a single culture may seed at via procgen sampling in one world. Prevents one culture from claiming all four Face-Center Pentagons by accident in a small pool. Authored overrides bypass this constraint."
+        }
+      },
+      "additionalProperties": false
+    },
+    "cosmic_horror_sites": {
+      "type": "object",
+      "description": "Placement of cosmic-horror manifestation locations. Per the design constraint that cosmic horror is part of the world (placement still being grilled).",
+      "properties": {
+        "site_count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+        "placement_preferences": {
+          "type": "array",
+          "description": "Tile selection biases for cosmic-horror sites.",
+          "items": {
+            "type": "string",
+            "enum": ["deep_underground", "remote_wilderness", "ruined_sub_faction_sites", "high_susceptibility_biomes", "between_world_breaches"]
+          },
+          "uniqueItems": true
+        },
+        "min_distance_from_sub_faction_tiles": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum tile-graph distance from any sub_faction-owned tile. Higher values keep horrors away from civilization at world start."
+        }
+      },
+      "required": ["site_count_range"],
+      "additionalProperties": false
+    },
+    "player_spawn": {
+      "type": "object",
+      "description": "Configuration for the player character's initial position and inventory. The player's sub_faction (typically the crash-site camp per the flagship's design) handles its own tile placement via the sub_faction's initial_tile_assignment; this section is about the player CHARACTER within that sub_faction, not the sub_faction itself.",
+      "properties": {
+        "sub_faction": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "URN of the authored sub_faction the player starts in. Must be present in sub_faction_generation.authored_sub_factions."
+        },
+        "spawn_tile_selection": {
+          "type": "string",
+          "enum": ["random", "first_assigned", "center_of_mass"],
+          "default": "first_assigned",
+          "description": "How to pick a specific tile within the sub_faction for player spawn."
+        },
+        "starting_inventory": {
+          "type": "array",
+          "description": "Items the player has at world start. Distinct from the sub_faction's stored resources.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "count": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["item", "count"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["sub_faction"],
+      "additionalProperties": false
+    },
+    "weather_globals": {
+      "type": "object",
+      "description": "Global weather parameters. Per-biome weather patterns override at the tile level.",
+      "properties": {
+        "blood_moon_period_days": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 28,
+          "description": "Game days between blood moon events. Zero disables."
+        },
+        "void_aurora_chance_per_night": {
+          "$ref": "_common.schema.json#/$defs/ProbabilityWeight",
+          "default": 0.05
+        }
+      },
+      "additionalProperties": false
+    },
+    "cargo_manifest": {
+      "type": "object",
+      "description": "Per the Project Halcyon design doc. The Resonance Web artifacts that were aboard the Halcyon at the time of crash, per-playthrough procgen. The cargo manifest itself is split between artifacts the player recovers from wreckage-archaeology and artifacts that were planet-native (placed in pre-history by the Architectural Age). Heart-Class artifacts are constrained to canonical seven-of-seven; lower classes are budgeted by ranges.",
+      "properties": {
+        "total_artifact_count_range": {
+          "$ref": "_common.schema.json#/$defs/IntegerRange",
+          "description": "Total artifacts placed in the world per playthrough across all classes and pools. Design doc range: ~12 to ~25."
+        },
+        "heart_class_split": {
+          "type": "object",
+          "description": "Heart-Class artifacts are always seven total across the playthrough. This block governs the cargo-vs-planet split.",
+          "properties": {
+            "cargo_count_range": {
+              "$ref": "_common.schema.json#/$defs/IntegerRange",
+              "description": "Number of Heart-Class artifacts placed in the Halcyon's recoverable cargo manifest. Design doc range: 3 to 4 of the seven."
+            },
+            "planet_native_count_range": {
+              "$ref": "_common.schema.json#/$defs/IntegerRange",
+              "description": "Number of Heart-Class artifacts placed as planet-native (held by Sub-Factions, bosses, or geographic features). Design doc range: 3 to 4 of the seven. Sum of cargo and planet-native must equal 7."
+            },
+            "tier_locked_artifacts": {
+              "type": "array",
+              "description": "Heart-Class artifact URNs that bypass the cargo/planet split because their placement_pool is tier_locked (notably the Prime Array). These are placed by their tier_lock criteria rather than counted against the split.",
+              "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "uniqueItems": true
+            }
+          },
+          "required": ["cargo_count_range", "planet_native_count_range"],
+          "additionalProperties": false
+        },
+        "voice_class_count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+        "eye_class_count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+        "hand_class_count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+        "wreckage_recovery_curve": {
+          "type": "object",
+          "description": "How cargo artifacts surface to the player. The Halcyon's data systems progressively reveal what was being carried as the player restores them; in-cargo artifacts are not all immediately known or accessible. This governs the discovery pacing.",
+          "properties": {
+            "act_3_known_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.1,
+              "description": "Fraction of cargo artifacts known to the player by end of Opening Sequence Act 3. Lower values lean discovery into mid-game."
+            },
+            "mid_game_known_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.6,
+              "description": "Fraction of cargo artifacts known by mid-game (rough Storyteller tier 2-3 progression)."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["total_artifact_count_range", "heart_class_split"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["planet", "default_seed", "biome_assignment", "sub_faction_generation", "cosmic_horror_sites", "player_spawn"],
+  "additionalProperties": false
+}

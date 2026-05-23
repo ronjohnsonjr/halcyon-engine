@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/recipe.schema.json",
+  "title": "Recipes Registry File (recipes.json)",
+  "description": "Schema for the recipes registry. Per ADR-0005, recipes are pure-data Registry File entries. The recipes.json file maps recipe ids to recipe definitions. Recipes describe how items (or blocks) transform into other items via crafting stations or player actions.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Recipe"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Recipe": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "smelting",
+            "smithing",
+            "knapping",
+            "clayforming",
+            "pottery",
+            "weaving",
+            "leatherworking",
+            "carpentry",
+            "masonry",
+            "alchemy",
+            "cooking",
+            "brewing",
+            "tesla_assembly",
+            "mechanical_assembly",
+            "magical_inscription",
+            "ritual"
+          ],
+          "description": "Top-level crafting category. Drives UI grouping and skill checks."
+        },
+        "inputs": {
+          "type": "array",
+          "description": "Required input items. All consumed when the recipe is crafted.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "count": { "type": "integer", "minimum": 1 },
+              "consumed": { "type": "boolean", "default": true, "description": "If false, the item must be present but is not consumed (a catalyst)." }
+            },
+            "required": ["item", "count"],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Items produced when the recipe is crafted.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "count": { "type": "integer", "minimum": 1 },
+              "probability": {
+                "$ref": "_common.schema.json#/$defs/ProbabilityWeight",
+                "description": "Probability of producing this output. Defaults to 1 (always). Less than 1 for stochastic outputs like rare byproducts."
+              }
+            },
+            "required": ["item", "count"],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "station_required": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "Optional. station:* URN. Some recipes are craftable anywhere (knapping a flint); most require a specific station."
+        },
+        "tool_required": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "Optional. item:* URN of a tool that must be in inventory (and used) to craft this. Tool durability decrements per craft."
+        },
+        "time_to_craft_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Real-time seconds of crafting animation. Zero means instant."
+        },
+        "tech_tier_required": {
+          "type": "string",
+          "enum": ["stone", "copper", "bronze", "iron", "steel", "tesla_tech", "magical", "void"],
+          "description": "Minimum tech tier the player must have unlocked to craft this. Mirrors the flagship game's analog-tech progression."
+        },
+        "magic_tradition_required": {
+          "type": "string",
+          "description": "Optional. Specific magic tradition required (e.g., 'karnish_sky_magic'). For recipes only craftable by NPCs of that tradition, or by the player after learning it."
+        },
+        "unlocks_via": {
+          "type": "string",
+          "enum": ["default", "discovery", "storylet", "npc_taught", "scroll", "artifact"],
+          "default": "default",
+          "description": "How the player learns this recipe. 'default' means available from the start; others gate it behind a discovery mechanic."
+        },
+        "lore": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      },
+      "required": ["display_name", "category", "inputs", "outputs", "time_to_craft_seconds", "tech_tier_required"],
+      "additionalProperties": false
+    }
+  }
+}

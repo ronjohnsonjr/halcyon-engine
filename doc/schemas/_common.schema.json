@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/_common.schema.json",
+  "title": "Common reusable schema fragments",
+  "description": "Reusable patterns referenced by other engine schemas. Per ADR-0006, ADR-0012, ADR-0013.",
+  "$defs": {
+    "Identifier": {
+      "description": "An entity id. Lowercase snake_case. Must match the directory or registry key name.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "ReferenceURN": {
+      "description": "Typed cross-reference per ADR-0006. Form: <kind>:<id>. Resolves via Manifest Index.",
+      "type": "string",
+      "pattern": "^(npc|npc_template|wildlife|wildlife_template|macro_faction|sub_faction|sub_faction_template|item|block|recipe|role|drive|storylet|culture|biome|tile|scene|script|content|world|station|station_template|player|artifact|tesla_core|boss|settlement):[a-z][a-z0-9_/]*$"
+    },
+    "RuntimeReferenceURN": {
+      "description": "Reference URN that may point to a procgen-generated runtime instance. Validator does not check resolution at authoring time. Used for fields like ruler/heir where the value may be hand-authored OR procgen.",
+      "type": "string",
+      "pattern": "^(npc|wildlife|sub_faction|macro_faction):[a-z][a-z0-9_]*$"
+    },
+    "TemplateParameter": {
+      "description": "A placeholder for runtime substitution. Used in storylet preconditions and effects. Form: $name.",
+      "type": "string",
+      "pattern": "^\\$[a-z][a-z0-9_]*$"
+    },
+    "DotPathParameter": {
+      "description": "A template parameter with dot-path access into a runtime object. Used in storylet effects and dialogue refs. Forms: $sub_faction.ruler, $sub_faction.elite_overproduction_ratio. The validator accepts the syntax; runtime resolution validates that the path exists on the referenced object.",
+      "type": "string",
+      "pattern": "^\\$[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$"
+    },
+    "SubstitutionPattern": {
+      "description": "A string template with curly-brace placeholders resolved against the appropriate name table or runtime context. Used in name patterns and lore patterns. Examples: 'Kingdom of {place_root}', '{first} {family_name}', 'The {name} Choir'. Valid placeholder names depend on context: name_tables expose {first}, {family_name}, {place_root}, {epithet}; sub_faction lore_pattern exposes {ruler_name}, {capital_name}, {founding_year}.",
+      "type": "string",
+      "pattern": "^[^{}]*(\\{[a-z_][a-z0-9_]*\\}[^{}]*)*$",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "RuntimeExpression": {
+      "description": "An inline expression evaluated against world state at runtime. Used by storylet salience. The expression language supports: numeric literals, basic arithmetic (+ - * /), parentheses, and dotted-path reads against the world-state namespace.\n\nDocumented namespace (see expression_namespace.md):\n  sub_faction.N, sub_faction.S, sub_faction.W, sub_faction.E, sub_faction.solidarity, sub_faction.treasury, sub_faction.elite_overproduction_ratio\n  tile.cosmic_horror_susceptibility, tile.biome_id\n  world.season, world.time_in_days, world.cosmic_horror_intensity_avg\n  npc.affinity_with_player\n\nThe validator accepts the string but does not parse it; the engine's expression evaluator validates references against the runtime namespace and emits errors for undefined variables.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "TagId": {
+      "description": "A free-form tag identifier. Tags are informally documented per-project; the validator does not enforce a central registry. Use tags for filtering and storylet preconditions; do not rely on tag semantics that aren't documented in the project's README.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 64
+    },
+    "PathRef": {
+      "description": "A filesystem path relative to the project root. Validator checks the file exists.",
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_./-]+$",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "ScriptRef": {
+      "description": "A reference to a script file used in place of inline data. Used in Storylet effects and salience.",
+      "type": "object",
+      "properties": {
+        "script": { "$ref": "#/$defs/PathRef" }
+      },
+      "required": ["script"],
+      "additionalProperties": false
+    },
+    "FileRef": {
+      "description": "A reference to a content file used in place of inline text. Used in Storylet content.",
+      "type": "object",
+      "properties": {
+        "file": { "$ref": "#/$defs/PathRef" }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+    "AssetRef": {
+      "description": "A reference to a catalog asset by content hash. Resolved by the asset catalog. Per the asset pipeline (Section 3.4).",
+      "type": "object",
+      "properties": {
+        "asset": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "license": { "type": "string" },
+        "attribution": { "type": "string" }
+      },
+      "required": ["asset"],
+      "additionalProperties": false
+    },
+    "Drive": {
+      "description": "A weighted goal or aversion held by an NPC. Per ADR-0012.",
+      "type": "object",
+      "properties": {
+        "drive": { "$ref": "#/$defs/Identifier" },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "required": ["drive", "weight"],
+      "additionalProperties": false
+    },
+    "NumberRange": {
+      "description": "An inclusive numeric range used in Template variability fields.",
+      "type": "object",
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      },
+      "required": ["min", "max"],
+      "additionalProperties": false
+    },
+    "IntegerRange": {
+      "description": "An inclusive integer range.",
+      "type": "object",
+      "properties": {
+        "min": { "type": "integer" },
+        "max": { "type": "integer" }
+      },
+      "required": ["min", "max"],
+      "additionalProperties": false
+    },
+    "ProbabilityWeight": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

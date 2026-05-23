@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/npc_template.schema.json",
+  "title": "NPC Template",
+  "description": "Schema for a procgen NPC template. Per ADR-0014. World generation instantiates this template to produce many concrete NPC instances at world creation, each with a procedurally generated URN. Lives in npc_templates/<template_id>/data.json.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "_common.schema.json#/$defs/Identifier",
+      "description": "Matches the parent directory name."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Designer-facing template name. Procgen instances use generated names from name_patterns."
+    },
+    "name_patterns": {
+      "type": "object",
+      "description": "Procedural name generation. Either fixed pool or pattern-based. If both are provided, 'pool' overrides 'pattern': names are sampled from the pool directly. Use 'pattern' alone when names should be composed from the referenced culture's name tables.",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "description": "Pool of complete names to draw from. The procgen system samples without replacement per sub_faction to avoid duplicates locally.",
+          "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+        },
+        "pattern": {
+          "allOf": [{ "$ref": "_common.schema.json#/$defs/SubstitutionPattern" }],
+          "description": "Generative pattern. Available placeholders for NPC name patterns: {first} (sampled from the referenced culture's first_names_* tables, gender-aware if NPC has gender), {family_name} (sampled from family_names), {epithet} (sampled from epithets), {place_root} (sampled from place_roots). Example: '{first} {family_name}', '{first} of {place_root}', '{first} the {epithet}'."
+        }
+      },
+      "additionalProperties": false
+    },
+    "roles": {
+      "type": "array",
+      "description": "Role URNs assigned to every instance from this template.",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "minItems": 0,
+      "maxItems": 8
+    },
+    "drive_distributions": {
+      "type": "array",
+      "description": "Drive weight distributions. Each instance samples a weight from the range for each listed drive.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "drive": { "$ref": "_common.schema.json#/$defs/Identifier" },
+          "weight_range": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+        },
+        "required": ["drive", "weight_range"],
+        "additionalProperties": false
+      },
+      "maxItems": 16
+    },
+    "allowlist": {
+      "type": "array",
+      "description": "Permitted tool calls. Same as NPC schema; applies to every instance.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "personality_seeds": {
+      "type": "array",
+      "description": "Pool of personality prose snippets. The procgen system samples one or composes from multiple. Each instance's personality is recorded permanently in the world DB.",
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "memory_seed_patterns": {
+      "type": "array",
+      "description": "Templated memory seeds. Each string may reference template parameters via $name placeholders, substituted at instance creation. Documented parameters: $sub_faction (URN of the instance's sub_faction), $culture (URN of the instance's culture), $birth_year (sampled int), $service_years (sampled int, for soldier/elder templates), $original_name (pre-corruption name, for void_touched templates). Example: 'Born in $sub_faction. Remembers the long winter of three years past.' Validator accepts the syntax; runtime substitution emits errors for undefined parameters.",
+      "items": { "type": "string", "minLength": 1, "maxLength": 1024 },
+      "maxItems": 16
+    },
+    "count_per_sub_faction": {
+      "description": "How many instances to generate per sub_faction when this template is referenced in a sub_faction's npc_templates_used.",
+      "$ref": "_common.schema.json#/$defs/IntegerRange"
+    },
+    "combat_stat_ranges": {
+      "type": "object",
+      "description": "Stat ranges. Each instance samples one value per stat.",
+      "properties": {
+        "max_health": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+        "damage": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "armor": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "magic_resistance": { "$ref": "_common.schema.json#/$defs/NumberRange" },
+        "tech_resistance": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+      },
+      "additionalProperties": false
+    },
+    "appearance_variations": {
+      "type": "object",
+      "description": "Visual variation pools.",
+      "properties": {
+        "scenes": {
+          "type": "array",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "models": {
+          "type": "array",
+          "items": { "$ref": "_common.schema.json#/$defs/AssetRef" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "display_name", "roles", "drive_distributions", "allowlist", "personality_seeds"],
+  "additionalProperties": false
+}

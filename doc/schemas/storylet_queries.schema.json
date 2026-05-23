@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/storylet_queries.schema.json",
+  "title": "Storylet Precondition Query Types",
+  "description": "Per-type parameter sub-schemas for storylet preconditions. Per ADR-0013, storylets reference queries with the form {query: 'type_name', ...params}. This file is referenced by storylet.schema.json's Query oneOf to validate each query's parameter shape.",
+  "$defs": {
+    "Query": {
+      "description": "Discriminated union of all query types. Storylet.preconditions[] elements must validate against this.",
+      "oneOf": [
+        { "$ref": "#/$defs/SubFactionAtPeaceQuery" },
+        { "$ref": "#/$defs/SubFactionAtWarQuery" },
+        { "$ref": "#/$defs/SubFactionRulerStatusQuery" },
+        { "$ref": "#/$defs/SubFactionHeirExistsQuery" },
+        { "$ref": "#/$defs/SubFactionStateThresholdQuery" },
+        { "$ref": "#/$defs/NpcHasDriveQuery" },
+        { "$ref": "#/$defs/NpcAffinityThresholdQuery" },
+        { "$ref": "#/$defs/TileHasBiomeQuery" },
+        { "$ref": "#/$defs/TileOwnedBySubFactionQuery" },
+        { "$ref": "#/$defs/WorldEventRecentQuery" },
+        { "$ref": "#/$defs/TimeSinceEventQuery" },
+        { "$ref": "#/$defs/SeasonQuery" },
+        { "$ref": "#/$defs/WeatherQuery" },
+        { "$ref": "#/$defs/CosmicHorrorProximityQuery" },
+        { "$ref": "#/$defs/PlayerInSubFactionQuery" },
+        { "$ref": "#/$defs/PlayerHasItemQuery" }
+      ]
+    },
+    "SubFactionRef": {
+      "description": "A sub_faction reference: a specific sub_faction URN, the runtime URN of a procgen sub_faction, the template parameter $sub_faction, or a dot-path like $tile.sub_faction_owner.",
+      "anyOf": [
+        { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        { "$ref": "_common.schema.json#/$defs/TemplateParameter" },
+        { "$ref": "_common.schema.json#/$defs/DotPathParameter" }
+      ]
+    },
+    "NpcRef": {
+      "description": "An NPC reference: an authored URN, a runtime URN, the template parameter $npc, or a dot-path like $sub_faction.ruler.",
+      "anyOf": [
+        { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        { "$ref": "_common.schema.json#/$defs/TemplateParameter" },
+        { "$ref": "_common.schema.json#/$defs/DotPathParameter" }
+      ]
+    },
+    "SubFactionAtPeaceQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "sub_faction_at_peace" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" },
+        "with": {
+          "$ref": "#/$defs/SubFactionRef",
+          "description": "Optional. If present, checks peace with a specific other sub_faction. If absent, checks peace with ALL other sub_factions."
+        }
+      },
+      "required": ["query", "sub_faction"],
+      "additionalProperties": false
+    },
+    "SubFactionAtWarQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "sub_faction_at_war" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" },
+        "with": { "$ref": "#/$defs/SubFactionRef" }
+      },
+      "required": ["query", "sub_faction"],
+      "additionalProperties": false
+    },
+    "SubFactionRulerStatusQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "sub_faction_ruler_status" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" },
+        "status": {
+          "type": "string",
+          "enum": ["alive", "dead", "missing", "deposed", "incapacitated"]
+        }
+      },
+      "required": ["query", "sub_faction", "status"],
+      "additionalProperties": false
+    },
+    "SubFactionHeirExistsQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "sub_faction_heir_exists" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" },
+        "value": { "type": "boolean" }
+      },
+      "required": ["query", "sub_faction", "value"],
+      "additionalProperties": false
+    },
+    "SubFactionStateThresholdQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "sub_faction_state_threshold" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" },
+        "variable": {
+          "type": "string",
+          "enum": ["cohesion", "reach", "mandate", "martial_power", "defensive_posture", "strain", "treasury"]
+        },
+        "comparison": { "type": "string", "enum": ["lt", "lte", "eq", "gte", "gt"] },
+        "threshold": { "type": "number" }
+      },
+      "required": ["query", "sub_faction", "variable", "comparison", "threshold"],
+      "additionalProperties": false
+    },
+    "NpcHasDriveQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "npc_has_drive" },
+        "npc": { "$ref": "#/$defs/NpcRef" },
+        "drive": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "min_weight": { "$ref": "_common.schema.json#/$defs/ProbabilityWeight" }
+      },
+      "required": ["query", "npc", "drive"],
+      "additionalProperties": false
+    },
+    "NpcAffinityThresholdQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "npc_affinity_threshold" },
+        "npc": { "$ref": "#/$defs/NpcRef" },
+        "comparison": { "type": "string", "enum": ["lt", "lte", "eq", "gte", "gt"] },
+        "threshold": { "type": "number", "minimum": -1, "maximum": 1 }
+      },
+      "required": ["query", "npc", "comparison", "threshold"],
+      "additionalProperties": false
+    },
+    "TileHasBiomeQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "tile_has_biome" },
+        "tile": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "$ref": "_common.schema.json#/$defs/TemplateParameter" }
+          ]
+        },
+        "biome": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+      },
+      "required": ["query", "tile", "biome"],
+      "additionalProperties": false
+    },
+    "TileOwnedBySubFactionQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "tile_owned_by_sub_faction" },
+        "tile": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "$ref": "_common.schema.json#/$defs/TemplateParameter" }
+          ]
+        },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" }
+      },
+      "required": ["query", "tile", "sub_faction"],
+      "additionalProperties": false
+    },
+    "WorldEventRecentQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "world_event_recent" },
+        "event_type": { "type": "string" },
+        "within_seconds": { "type": "integer", "minimum": 1 },
+        "scope": { "type": "string", "enum": ["world", "sub_faction", "tile"], "default": "world" }
+      },
+      "required": ["query", "event_type", "within_seconds"],
+      "additionalProperties": false
+    },
+    "TimeSinceEventQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "time_since_event" },
+        "event_type": { "type": "string" },
+        "min_seconds": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["query", "event_type", "min_seconds"],
+      "additionalProperties": false
+    },
+    "SeasonQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "season" },
+        "value": { "type": "string", "enum": ["spring", "summer", "autumn", "winter"] }
+      },
+      "required": ["query", "value"],
+      "additionalProperties": false
+    },
+    "WeatherQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "weather" },
+        "value": { "type": "string", "enum": ["clear", "rain", "snow", "fog", "storm", "blood_moon", "void_aurora"] }
+      },
+      "required": ["query", "value"],
+      "additionalProperties": false
+    },
+    "CosmicHorrorProximityQuery": {
+      "type": "object",
+      "description": "Matches if any cosmic-horror manifestation exists within max_tile_distance of the referenced tile AND its intensity meets or exceeds min_intensity. Use min_intensity > 0 to require an active manifestation rather than just proximity to a designated site.",
+      "properties": {
+        "query": { "const": "cosmic_horror_proximity" },
+        "tile": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "$ref": "_common.schema.json#/$defs/TemplateParameter" }
+          ]
+        },
+        "max_tile_distance": { "type": "integer", "minimum": 0 },
+        "min_intensity": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      },
+      "required": ["query", "tile", "max_tile_distance", "min_intensity"],
+      "additionalProperties": false
+    },
+    "PlayerInSubFactionQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "player_in_sub_faction" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" }
+      },
+      "required": ["query", "sub_faction"],
+      "additionalProperties": false
+    },
+    "PlayerHasItemQuery": {
+      "type": "object",
+      "properties": {
+        "query": { "const": "player_has_item" },
+        "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "min_count": { "type": "integer", "minimum": 1, "default": 1 }
+      },
+      "required": ["query", "item"],
+      "additionalProperties": false
+    }
+  }
+}

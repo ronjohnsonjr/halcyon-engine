@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/block.schema.json",
+  "title": "Blocks Registry File (blocks.json)",
+  "description": "Schema for the blocks registry. Per ADR-0005, blocks are pure-data Registry File entries. The blocks.json file at project root maps block ids to block definitions. Block instances live in voxel chunks (per ADR-0010); this file defines block kinds.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Block"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Block": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "natural_terrain",
+            "vegetation",
+            "ore",
+            "liquid",
+            "building",
+            "decorative",
+            "mechanism",
+            "magical",
+            "cosmic"
+          ]
+        },
+        "hardness": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Mining difficulty. Higher requires better tools and more time."
+        },
+        "tool_required": {
+          "description": "Optional. item:* URN of a tool required to mine. Use null or omit if any tool (or bare hands) works.",
+          "oneOf": [
+            { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+            { "type": "null" }
+          ]
+        },
+        "tool_tier_required": {
+          "type": "string",
+          "enum": ["any", "stone", "copper", "bronze", "iron", "steel", "tesla_tech", "magical"],
+          "description": "Minimum tool tier. Mirrors the tech-tier progression of the flagship game."
+        },
+        "drops": {
+          "type": "array",
+          "description": "What this block drops when mined.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" },
+              "probability": { "$ref": "_common.schema.json#/$defs/ProbabilityWeight" },
+              "tool_bonus": {
+                "type": "object",
+                "description": "Optional. Bonus drops when mined with a specific tool tier.",
+                "properties": {
+                  "tool_tier": { "type": "string" },
+                  "extra_count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" }
+                },
+                "required": ["tool_tier", "extra_count_range"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["item", "count_range"],
+            "additionalProperties": false
+          },
+          "maxItems": 8
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Light blocking, [0=transparent, 1=opaque]."
+        },
+        "emits_light": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15,
+          "description": "Light level emitted, [0-15]."
+        },
+        "solid": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the block has collision."
+        },
+        "passable_when_walking": {
+          "type": "boolean",
+          "default": false,
+          "description": "Some blocks (tall grass, shallow water) are solid in voxel terms but walkable."
+        },
+        "textures": {
+          "type": "object",
+          "description": "Per-face textures. Defaults to 'all' for uniform blocks.",
+          "properties": {
+            "all": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "top": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "bottom": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "sides": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "north": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "south": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "east": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+            "west": { "$ref": "_common.schema.json#/$defs/AssetRef" }
+          },
+          "additionalProperties": false
+        },
+        "biome_affinity": {
+          "type": "array",
+          "description": "Biomes where this block generates naturally. Used by world gen.",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "tags": {
+          "type": "array",
+          "description": "Optional informal tags. See item.schema.json tags documentation.",
+          "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+          "uniqueItems": true
+        }
+      },
+      "required": ["display_name", "category", "hardness", "opacity"],
+      "additionalProperties": false
+    }
+  }
+}

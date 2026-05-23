@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/storylet_effects.schema.json",
+  "title": "Storylet Effect Types",
+  "description": "Per-type parameter sub-schemas for storylet effects. Per ADR-0013, storylet effects are typed mutations applied when the storylet fires. This file is referenced by storylet.schema.json's Effect oneOf to validate each effect's parameter shape.",
+  "$defs": {
+    "Effect": {
+      "description": "Discriminated union of all effect types.",
+      "oneOf": [
+        { "$ref": "#/$defs/SpawnTemporaryNpcEffect" },
+        { "$ref": "#/$defs/SpawnTemporaryWildlifeEffect" },
+        { "$ref": "#/$defs/SetAffinityEffect" },
+        { "$ref": "#/$defs/SetSubFactionStateVariableEffect" },
+        { "$ref": "#/$defs/ModifySubFactionStateVariableEffect" },
+        { "$ref": "#/$defs/EmitEventEffect" },
+        { "$ref": "#/$defs/UnlockRecipeEffect" },
+        { "$ref": "#/$defs/GrantItemEffect" },
+        { "$ref": "#/$defs/RemoveItemEffect" },
+        { "$ref": "#/$defs/TriggerDialogueEffect" },
+        { "$ref": "#/$defs/ModifyTileBiomeEffect" },
+        { "$ref": "#/$defs/SpawnCosmicHorrorManifestationEffect" }
+      ]
+    },
+    "SubFactionRef": {
+      "description": "A sub_faction reference: an authored sub_faction URN, a runtime URN, the template parameter $sub_faction, or a dot-path like $tile.sub_faction_owner.",
+      "anyOf": [
+        { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        { "$ref": "_common.schema.json#/$defs/TemplateParameter" },
+        { "$ref": "_common.schema.json#/$defs/DotPathParameter" }
+      ]
+    },
+    "NpcRef": {
+      "description": "An NPC reference: an authored NPC URN, a runtime URN, the template parameter $npc, or a dot-path like $sub_faction.ruler.",
+      "anyOf": [
+        { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        { "$ref": "_common.schema.json#/$defs/TemplateParameter" },
+        { "$ref": "_common.schema.json#/$defs/DotPathParameter" }
+      ]
+    },
+    "TileRef": {
+      "description": "A tile reference: an integer hex tile id, the template parameter $tile, or a dot-path.",
+      "anyOf": [
+        { "type": "integer", "minimum": 0 },
+        { "$ref": "_common.schema.json#/$defs/TemplateParameter" },
+        { "$ref": "_common.schema.json#/$defs/DotPathParameter" }
+      ]
+    },
+    "SpawnTemporaryNpcEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "spawn_temporary_npc" },
+        "from_template": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "near_tile": { "$ref": "#/$defs/TileRef" },
+        "duration_in_game_days": { "type": "integer", "minimum": 1 },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" }
+      },
+      "required": ["type", "from_template"],
+      "additionalProperties": false
+    },
+    "SpawnTemporaryWildlifeEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "spawn_temporary_wildlife" },
+        "from_template": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "near_tile": { "$ref": "#/$defs/TileRef" },
+        "count_range": { "$ref": "_common.schema.json#/$defs/IntegerRange" }
+      },
+      "required": ["type", "from_template"],
+      "additionalProperties": false
+    },
+    "SetAffinityEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "set_affinity" },
+        "npc": { "$ref": "#/$defs/NpcRef" },
+        "value": { "type": "number", "minimum": -1, "maximum": 1 }
+      },
+      "required": ["type", "npc", "value"],
+      "additionalProperties": false
+    },
+    "SetSubFactionStateVariableEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "set_sub_faction_state_variable" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" },
+        "variable": {
+          "type": "string",
+          "enum": ["cohesion", "reach", "mandate", "martial_power", "defensive_posture", "strain", "treasury"]
+        },
+        "value": { "type": "number" }
+      },
+      "required": ["type", "sub_faction", "variable", "value"],
+      "additionalProperties": false
+    },
+    "ModifySubFactionStateVariableEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "modify_sub_faction_state_variable" },
+        "sub_faction": { "$ref": "#/$defs/SubFactionRef" },
+        "variable": {
+          "type": "string",
+          "enum": ["cohesion", "reach", "mandate", "martial_power", "defensive_posture", "strain", "treasury"]
+        },
+        "delta": { "type": "number" },
+        "operation": {
+          "type": "string",
+          "enum": ["add", "multiply"],
+          "default": "add"
+        }
+      },
+      "required": ["type", "sub_faction", "variable", "delta"],
+      "additionalProperties": false
+    },
+    "EmitEventEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "emit_event" },
+        "event_type": { "type": "string" },
+        "scope": { "type": "string", "enum": ["world", "sub_faction", "tile"], "default": "world" },
+        "metadata": {
+          "type": "object",
+          "description": "Arbitrary metadata attached to the event. Consumed by other storylets matching against the event log.",
+          "additionalProperties": true
+        }
+      },
+      "required": ["type", "event_type"],
+      "additionalProperties": false
+    },
+    "UnlockRecipeEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "unlock_recipe" },
+        "recipe": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "for_player": { "type": "boolean", "default": true }
+      },
+      "required": ["type", "recipe"],
+      "additionalProperties": false
+    },
+    "GrantItemEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "grant_item" },
+        "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "count": { "type": "integer", "minimum": 1, "default": 1 },
+        "recipient": {
+          "oneOf": [
+            { "type": "string", "enum": ["player"] },
+            { "$ref": "#/$defs/NpcRef" }
+          ]
+        }
+      },
+      "required": ["type", "item"],
+      "additionalProperties": false
+    },
+    "RemoveItemEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "remove_item" },
+        "item": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "count": { "type": "integer", "minimum": 1, "default": 1 },
+        "from": {
+          "oneOf": [
+            { "type": "string", "enum": ["player"] },
+            { "$ref": "#/$defs/NpcRef" }
+          ]
+        }
+      },
+      "required": ["type", "item"],
+      "additionalProperties": false
+    },
+    "TriggerDialogueEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "trigger_dialogue" },
+        "npc": { "$ref": "#/$defs/NpcRef" },
+        "content": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "$ref": "_common.schema.json#/$defs/FileRef" }
+          ]
+        }
+      },
+      "required": ["type", "npc", "content"],
+      "additionalProperties": false
+    },
+    "ModifyTileBiomeEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "modify_tile_biome" },
+        "tile": { "$ref": "#/$defs/TileRef" },
+        "to_biome": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "transition_in_game_days": { "type": "integer", "minimum": 0, "default": 0 }
+      },
+      "required": ["type", "tile", "to_biome"],
+      "additionalProperties": false
+    },
+    "SpawnCosmicHorrorManifestationEffect": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "spawn_cosmic_horror_manifestation" },
+        "near_tile": { "$ref": "#/$defs/TileRef" },
+        "manifestation_template": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "intensity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "duration_in_game_days": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["type", "near_tile", "manifestation_template"],
+      "additionalProperties": false
+    }
+  }
+}

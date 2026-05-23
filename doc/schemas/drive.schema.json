@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/drive.schema.json",
+  "title": "Drives Registry File (drives.json)",
+  "description": "Schema for the drives registry. Drives are the weighted goals and aversions that NPCs hold; storylet preconditions and temporal-layer aggregation read drives to determine narrative salience. Per ADR-0012. The drives.json file at project root maps drive ids to drive definitions.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Drive"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Drive": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "description": "Designer notes and LLM-prompt-ready description.",
+          "maxLength": 256
+        },
+        "valence": {
+          "type": "string",
+          "enum": ["positive_goal", "negative_aversion"],
+          "description": "A positive_goal drive motivates NPCs to take action toward something (e.g., protect_village, accumulate_wealth). A negative_aversion drive motivates NPCs to avoid something (e.g., avoid_outsiders, fear_deep_places)."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["survival", "social", "political", "religious", "cultural", "economic", "personal", "cosmic"],
+          "description": "Drive category. Used for storylet salience aggregation and for filtering drives in template assignment."
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["universal", "culture_scoped", "sub_faction_scoped", "role_scoped"],
+          "description": "universal: any NPC can hold this. culture_scoped: only NPCs of specific cultures. sub_faction_scoped: tied to a sub_faction. role_scoped: tied to specific roles."
+        },
+        "scope_restrictions": {
+          "type": "array",
+          "description": "When scope is not universal, the specific URNs this drive is restricted to. Validator enforces.",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "typical_weight_range": {
+          "$ref": "_common.schema.json#/$defs/NumberRange",
+          "description": "Suggested weight range for templates that assign this drive. Not enforced; informational."
+        },
+        "satisfies": {
+          "type": "array",
+          "description": "Optional. Higher-order drives this one satisfies. Used by storylet salience to recognize when an action serves multiple drives.",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "conflicts_with": {
+          "type": "array",
+          "description": "Optional. Drives that conflict with this one. An NPC holding both at high weight experiences internal tension, surfaced through storylets.",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        }
+      },
+      "required": ["display_name", "valence", "category", "scope"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": { "not": { "const": "universal" } }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "required": ["scope_restrictions"]
+          }
+        }
+      ]
+    }
+  }
+}

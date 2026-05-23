@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/culture.schema.json",
+  "title": "Cultures Registry File (cultures.json)",
+  "description": "Schema for the cultures registry. Per ADRs 0014, 0015. Cultures define defaults for sub_factions (Turchin coefficients, name tables, religious traditions, magic traditions, social stratification). Authored SubFaction instances and SubFaction Templates inherit defaults from their referenced culture.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Culture"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Culture": {
+      "type": "object",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "default_turchin_coefficients": {
+          "type": "object",
+          "description": "Default ODE coefficients for sub_factions of this culture. SubFaction instances and templates may override via coefficient_overrides.",
+          "properties": {
+            "asabiyyah_gain_rate": { "type": "number" },
+            "asabiyyah_decay_rate": { "type": "number" },
+            "elite_reproduction_rate": { "type": "number" },
+            "state_overhead_beta": { "type": "number" },
+            "tax_efficiency_rho": { "type": "number" },
+            "carrying_capacity_coupling": { "type": "number" }
+          },
+          "required": [
+            "asabiyyah_gain_rate",
+            "asabiyyah_decay_rate",
+            "elite_reproduction_rate",
+            "state_overhead_beta",
+            "tax_efficiency_rho",
+            "carrying_capacity_coupling"
+          ],
+          "additionalProperties": false
+        },
+        "name_tables": {
+          "type": "object",
+          "description": "Procedural name generation pools. Used by NPC templates and SubFaction templates referencing this culture.",
+          "properties": {
+            "first_names_masculine": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 5
+            },
+            "first_names_feminine": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 5
+            },
+            "first_names_unisex": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "family_names": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "epithets": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Optional epithets like 'the Wise', 'the Cruel', 'Stormborn'."
+            },
+            "sub_faction_name_patterns": {
+              "type": "array",
+              "items": { "$ref": "_common.schema.json#/$defs/SubstitutionPattern" },
+              "description": "Patterns for sub_faction names produced from this culture. Available placeholders: {family_name} (sampled from family_names), {place_root} (sampled from place_roots).",
+              "minItems": 3
+            },
+            "place_roots": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Geographic word roots used in sub_faction and place names."
+            }
+          },
+          "required": ["first_names_masculine", "first_names_feminine", "family_names", "sub_faction_name_patterns"],
+          "additionalProperties": false
+        },
+        "tech_baseline": {
+          "type": "string",
+          "enum": ["bronze_age", "iron_age", "medieval", "renaissance", "industrial", "tesla_punk"],
+          "description": "The default tech tier of sub_factions in this culture. The flagship game's player culture is tesla_punk; Hyborian cultures span bronze_age through medieval."
+        },
+        "magic_tradition": {
+          "type": "object",
+          "description": "How magic works in this culture, used for asymmetric magic-vs-tech interactions.",
+          "properties": {
+            "tradition_name": {
+              "type": "string",
+              "description": "Display name like 'Karnish Sky Magic', 'Sethrai Necromancy', or 'none'."
+            },
+            "domains": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["elemental", "necromancy", "divination", "summoning", "transmutation", "warding", "void", "blood", "song", "totemic"]
+              },
+              "uniqueItems": true
+            },
+            "asymmetric_strengths": {
+              "type": "array",
+              "description": "Where this magic is stronger than Tesla-tech. Used by combat resolution and storylet salience.",
+              "items": { "type": "string" }
+            },
+            "asymmetric_weaknesses": {
+              "type": "array",
+              "description": "Where this magic is weaker than Tesla-tech.",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["tradition_name"],
+          "additionalProperties": false
+        },
+        "religious_tradition": {
+          "type": "object",
+          "properties": {
+            "tradition_name": { "type": "string" },
+            "deity_count": { "type": "string", "enum": ["none", "monotheist", "polytheist", "henotheist", "animist", "ancestral"] },
+            "cosmic_horror_stance": {
+              "type": "string",
+              "enum": ["unaware", "warding", "appeasing", "worshipping", "actively_resisting"],
+              "description": "How this culture's religion relates to cosmic horror entities. Affects storylet selection in cosmic-horror events."
+            }
+          },
+          "required": ["tradition_name"],
+          "additionalProperties": false
+        },
+        "social_stratification": {
+          "type": "object",
+          "description": "Default class structure. Affects which roles exist and how the Turchin E variable is computed.",
+          "properties": {
+            "has_slave_economy": { "type": "boolean", "default": false },
+            "elite_class_names": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Display names for elite classes (e.g., 'patrician', 'thane', 'priest-king')."
+            },
+            "commoner_class_names": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "outsider_class_names": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "default_drives": {
+          "type": "array",
+          "description": "Drives commonly held by NPCs of this culture. NPC templates referencing this culture inherit these as default drive distributions.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "drive": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+              "weight_range": { "$ref": "_common.schema.json#/$defs/NumberRange" }
+            },
+            "required": ["drive", "weight_range"],
+            "additionalProperties": false
+          },
+          "maxItems": 16
+        },
+        "lore": {
+          "type": "string",
+          "maxLength": 8192
+        },
+        "pentagon_eligibility": {
+          "type": "array",
+          "description": "Per ADR-0018. Declares which Pentagon Site roles this culture is eligible to seed at during world generation. A culture may declare multiple eligibilities and will be available in each matching pool. Cultures without this field default to ['frontier'] (placed on regular hex tiles only, never seeds at Pentagon Sites).",
+          "items": {
+            "type": "string",
+            "enum": ["founding", "ruined", "corrupt", "frontier"]
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "default": ["frontier"]
+        }
+      },
+      "required": ["display_name", "default_turchin_coefficients", "name_tables", "tech_baseline", "social_stratification"],
+      "additionalProperties": false
+    }
+  }
+}

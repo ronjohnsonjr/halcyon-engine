@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/role.schema.json",
+  "title": "Roles Registry File (roles.json)",
+  "description": "Schema for the roles registry. Roles are stackable trait bundles assigned to NPCs. Per ADR-0012. Registry File pattern per ADR-0004. The roles.json file at project root maps role ids to role definitions.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9_]*$": {
+      "$ref": "#/$defs/Role"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Role": {
+      "type": "object",
+      "description": "A single stackable trait bundle. Multiple roles stack on an NPC; their fields combine according to engine rules.",
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "description": "Designer notes. Not consumed by the LLM.",
+          "maxLength": 512
+        },
+        "status_in_sub_faction": {
+          "type": "string",
+          "enum": ["elite", "commoner", "outsider", "military", "clergy", "merchant", "scholar", "outlaw", "slave", "ruler", "heir"],
+          "description": "How this role positions an NPC in the sub_faction's Turchin stratification. Affects E count contribution, succession eligibility, conflict dynamics."
+        },
+        "default_disposition_baseline": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "Affinity modifier toward the player at instantiation. Negative means starts hostile; positive means starts friendly; 0 is neutral."
+        },
+        "allowed_actions": {
+          "type": "array",
+          "description": "Tool call labels this role unlocks in the NPC's allowlist. Combined across all roles on the NPC.",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "uniqueItems": true,
+          "maxItems": 32
+        },
+        "drive_biases": {
+          "type": "array",
+          "description": "Drives this role tends to instill. Used by procgen NPC template instantiation; an NPC with this role gets these drives biased toward higher weight.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "drive": { "$ref": "_common.schema.json#/$defs/Identifier" },
+              "weight_bias": { "type": "number", "minimum": -0.5, "maximum": 0.5 }
+            },
+            "required": ["drive", "weight_bias"],
+            "additionalProperties": false
+          },
+          "maxItems": 16
+        },
+        "incompatible_with": {
+          "type": "array",
+          "description": "Role URNs that cannot stack with this one. Validator and procgen system enforce.",
+          "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" }
+        },
+        "requires_sub_faction_stratum": {
+          "type": "array",
+          "description": "If present, this role requires the sub_faction to have a matching status_in_sub_faction stratum (e.g., role:slave_overseer requires the sub_faction to have a slave economy).",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["display_name", "status_in_sub_faction", "default_disposition_baseline"],
+      "additionalProperties": false
+    }
+  }
+}

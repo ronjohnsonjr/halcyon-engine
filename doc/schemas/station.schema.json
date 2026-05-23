@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/station.schema.json",
+  "title": "Station Authored Instance",
+  "description": "Schema for a crafting station instance. Stations enable specific recipes per ADR-0005 and recipe.schema.json. Lives in stations/<station_id>/data.json. The Entity Directory contains data.json plus scene.tscn for the world representation of the station block/structure.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "_common.schema.json#/$defs/Identifier"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 512
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "primitive_workbench",
+        "forge",
+        "anvil",
+        "loom",
+        "tanning_rack",
+        "kiln",
+        "pottery_wheel",
+        "alchemy_table",
+        "cooking_hearth",
+        "brewing_vat",
+        "mechanical_assembly",
+        "tesla_workshop",
+        "magical_inscription_circle",
+        "ritual_altar"
+      ]
+    },
+    "tech_tier": {
+      "type": "string",
+      "enum": ["stone", "copper", "bronze", "iron", "steel", "tesla_tech", "magical", "void"],
+      "description": "Tech tier this station represents. Determines which recipes it can support and which player skill levels can use it."
+    },
+    "size_in_blocks": {
+      "type": "object",
+      "description": "Dimensions in voxel blocks. Used for placement validation and world-rendering scale.",
+      "properties": {
+        "x": { "type": "integer", "minimum": 1 },
+        "y": { "type": "integer", "minimum": 1 },
+        "z": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["x", "y", "z"],
+      "additionalProperties": false
+    },
+    "scene": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "scene:* URN of the visual representation. The scene file lives alongside data.json in the Entity Directory."
+    },
+    "recipes_supported": {
+      "type": "array",
+      "description": "Recipe URNs that can be crafted at this station. Recipes also declare station_required; both must agree at runtime.",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "minItems": 1
+    },
+    "power_requirement": {
+      "type": "object",
+      "description": "What's needed to operate this station.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["none", "manual", "water", "steam", "electric", "tesla_coil", "magical_ley", "blood_sacrifice"]
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Magnitude required. Manual = player effort time; steam = boiler pressure; tesla = voltage; magical_ley = ley line proximity."
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "skill_required": {
+      "type": "object",
+      "description": "Optional. Player prerequisites for operating this station. Currently constrained to tech_tier; a skill_level system may arrive later, but is not yet specced and is omitted from MVP.",
+      "properties": {
+        "tech_tier": { "type": "string", "enum": ["stone", "copper", "bronze", "iron", "steel", "tesla_tech", "magical", "void"] }
+      },
+      "required": ["tech_tier"],
+      "additionalProperties": false
+    },
+    "construction_recipe": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Recipe URN that constructs this station. The player crafts the station itself via this recipe before they can use it."
+    },
+    "durability": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Hit points of the station structure. Damage from combat, weather, or cosmic horror reduces it. At zero, the station breaks."
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional informal tags.",
+      "items": { "$ref": "_common.schema.json#/$defs/TagId" },
+      "uniqueItems": true
+    }
+  },
+  "required": ["id", "display_name", "category", "tech_tier", "size_in_blocks", "scene", "recipes_supported", "power_requirement"],
+  "additionalProperties": false
+}
