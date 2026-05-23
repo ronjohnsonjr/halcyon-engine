@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/workflow/agentic_run_prompt.schema.json",
+  "title": "Agentic Run Prompt Fixture",
+  "description": "Workflow schema for P4 Agentic Run acceptance prompts under `tests/agentic_runs/prompts/`.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+    },
+    "category": {
+      "type": "string",
+      "enum": ["manifest_content", "script_system", "scene_test", "storylet_narrative", "asset_binding", "context_design", "mixed_high_risk"]
+    },
+    "expected_changed_surfaces": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["manifest", "script", "scene", "test", "storylet", "asset_binding", "context_pack", "documentation"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "required_gates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["manifest_validation", "schema_fixtures", "scene_tests", "deterministic_replay", "doc_links", "doc_format"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "allowed_context_entries": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      },
+      "uniqueItems": true
+    },
+    "success_assertions": {
+      "type": "array",
+      "description": "Semantic and gate-based assertions for the run. Exact diff expectations should be reserved for migration or formatting prompts.",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["id", "title", "prompt", "category", "expected_changed_surfaces", "required_gates", "success_assertions"],
+  "additionalProperties": false
+}

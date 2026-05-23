@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/npc.schema.json",
+  "title": "NPC Authored Instance",
+  "description": "Schema for a hand-authored NPC instance. Per ADR-0008 (LLM-as-planner architecture), ADR-0012 (hybrid structured + freeform personality), ADR-0014 (authored instance vs template). Lives in npcs/<npc_id>/data.json.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "_common.schema.json#/$defs/Identifier",
+      "description": "Matches the parent directory name."
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Player-facing name."
+    },
+    "sub_faction": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "URN of the sub_faction this NPC belongs to. Must be sub_faction:* or sub_faction_template:* if procgen-affiliated. Optional for unaffiliated NPCs (wanderers, hermits, cosmic-horror agents)."
+    },
+    "culture": {
+      "$ref": "_common.schema.json#/$defs/ReferenceURN",
+      "description": "Direct culture URN for NPCs without a sub_faction (wanderers, hermits, cosmic-horror agents). NPCs with a sub_faction inherit culture transitively; this field is unnecessary in that case but the validator does not forbid it as long as it matches the sub_faction's culture."
+    },
+    "roles": {
+      "type": "array",
+      "description": "Stackable trait bundles. Each must resolve to a role:* URN.",
+      "items": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+      "minItems": 0,
+      "maxItems": 8
+    },
+    "drives": {
+      "type": "array",
+      "description": "Weighted goals and aversions. Used by storylet preconditions and temporal-layer aggregation.",
+      "items": { "$ref": "_common.schema.json#/$defs/Drive" },
+      "minItems": 0,
+      "maxItems": 16
+    },
+    "allowlist": {
+      "type": "array",
+      "description": "Permitted tool calls the in-game LLM may emit for this NPC. Per ADR-0011. The validator confirms each entry is a defined tool call. The engine validates at runtime.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "minItems": 0,
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "memory": {
+      "type": "object",
+      "description": "Initial memory state for the NPC's long-term vector store. Per ADR-0011.",
+      "properties": {
+        "starts_with": {
+          "type": "array",
+          "description": "Strings embedded into the vector store at NPC instantiation. Each is a memory the NPC has at start.",
+          "items": { "type": "string", "minLength": 1, "maxLength": 1024 },
+          "maxItems": 32
+        }
+      },
+      "additionalProperties": false
+    },
+    "llm_runtime": {
+      "type": "object",
+      "description": "Runtime LLM behavior requirements. Provider and hardware details live in Provider Configuration; NPCs only declare behavior tier, optional profile reference, and fallback requirements.",
+      "properties": {
+        "behavior_tier": {
+          "type": "string",
+          "enum": ["full_planning", "dialogue_affinity", "scripted_only"],
+          "description": "Runtime behavior level for this NPC. MVP demo NPCs may use full_planning; most NPCs use dialogue_affinity or scripted_only."
+        },
+        "runtime_profile": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Optional runtime profile id from Provider Configuration. Omit to use the runtime default."
+        },
+        "requires_scripted_fallback": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remote-enabled demo NPCs must have a scripted fallback so gameplay does not block when inference is unavailable."
+        },
+        "scripted_fallback": {
+          "$ref": "_common.schema.json#/$defs/ReferenceURN",
+          "description": "Optional Storylet or Script URN used when LLM inference is unavailable."
+        }
+      },
+      "required": ["behavior_tier"],
+      "additionalProperties": false
+    },
+    "personality": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 4096,
+      "description": "Freeform personality prose. Consumed only by the in-game LLM runtime in its system prompt. No other subsystem reads this field. Per ADR-0012."
+    },
+    "combat_stats": {
+      "type": "object",
+      "description": "Optional. NPCs that can engage in combat carry stats. Wildlife and unimportant NPCs typically omit. Absence means non-combatant: the engine treats the NPC as incapable of attacking and ignores damage delivered to them unless explicitly scripted otherwise.",
+      "properties": {
+        "max_health": { "type": "integer", "minimum": 1 },
+        "damage": { "type": "number", "minimum": 0 },
+        "armor": { "type": "number", "minimum": 0 },
+        "magic_resistance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "tech_resistance": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "appearance": {
+      "type": "object",
+      "description": "Visual representation. References to catalog assets or scene files.",
+      "properties": {
+        "scene": { "$ref": "_common.schema.json#/$defs/ReferenceURN" },
+        "model": { "$ref": "_common.schema.json#/$defs/AssetRef" },
+        "portrait": { "$ref": "_common.schema.json#/$defs/AssetRef" }
+      },
+      "additionalProperties": false
+    },
+    "recruitment_state": {
+      "type": "object",
+      "description": "Recruitment-related state per the Project Halcyon design doc. Five Pathways (Quest, Relationship, Opportunity, Faction-Standing, Coercion); each NPC is recruited via one path per playthrough. The Resolve/Will/Loyalty/Suppression model is adapted from RimWorld's prisoner/slavery systems. Optional block; absent means the NPC is not a recruitment candidate (e.g., authored Companions who are already part of the colony at world start, or hostile NPCs the design has flagged as unrecruitable).",
+      "properties": {
+        "is_recruitable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this NPC is eligible for recruitment via any of the five Pathways. False means the NPC cannot be recruited at all (the Veiled Sleeper, generic Void-Touched mobs, etc.)."
+        },
+        "resolve": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Voluntary-recruitment threshold per the design doc. Reduced via good treatment, conversation, gift-giving, shared experience, and faction-standing leverage. When Resolve reaches 0, voluntary recruitment opens; NPC joins as mid-to-high Loyalty Companion or Colonist. Higher threshold than Will but yields a much better result. Adapted from RimWorld's Resistance stat."
+        },
+        "will": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Forced-recruitment (coercion) threshold per the design doc. Lower than Resolve. Reduced via confinement, Drift exposure, bargaining, or restraints. When Will reaches 0, the captive can be forced into Coerced status as a low-Loyalty NPC under ongoing Suppression maintenance. Adapted from RimWorld's Will stat."
+        },
+        "loyalty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Per-NPC rapport with the Halcyon colony. Voluntarily-recruited NPCs start mid-to-high (50-80); Coerced NPCs start low (5-25). Affects willingness to take risks, follow risky orders, share knowledge willingly, stay in the colony of their own choice. Per-NPC and separate from per-player Companion relationship."
+        },
+        "recruitment_pathway": {
+          "type": "string",
+          "enum": ["quest", "relationship", "opportunity", "faction_standing", "coercion", "founding_member"],
+          "description": "The Pathway by which this NPC joined (or, on an unrecruited NPC, the pathway most likely to succeed per their template). 'founding_member' is reserved for the 78 Arcadian crash survivors; they did not need recruiting."
+        },
+        "is_coerced": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if NPC was recruited via the Coercion Pathway. Coerced NPCs require ongoing Suppression maintenance; failure to maintain raises rebellion chance. Significant reputation costs across most macros (Sethrai approve), and internal Halcyon dissent. Conversion to non-coerced is possible via the slow Conversion arc."
+        },
+        "suppression": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Active only when is_coerced is true. Decays without intervention. Maintained by assigned Halcyon Warden, restraints, Drift conditioning, or mass-spectacle. Low Suppression raises rebellion chance per multiplier-stacked rebellion math (mood, weapon proximity, room edge, unattended factor, captive count, moving capacity)."
+        },
+        "unwaveringly_loyal": {
+          "type": "boolean",
+          "default": false,
+          "description": "True for high-faction-bond captives (faction Captains, named clergy, high-rank nobles, leader-instances). Cannot be recruited via Resolve reduction; their Resolve is fixed and immune to normal reduction. Can still be Coerced via Will reduction, or unlocked via Resonance Amnesia, Null-Bond Severance, or slow Conversion."
+        },
+        "conversion_progress": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Active only when is_coerced is true. Increases via good treatment, shared adversity, and exposure to Helios values. At 100, the NPC converts to non-Coerced status with full Loyalty; reversible if treatment deteriorates. Adapted from RimWorld's Ideology DLC convert-prisoner mechanic."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "display_name", "roles", "drives", "allowlist", "personality"],
+  "additionalProperties": false
+}

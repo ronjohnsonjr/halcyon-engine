@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/workflow/provider_config.schema.json",
+  "title": "Provider Configuration",
+  "description": "Workflow schema for non-secret provider preferences in `.halcyon/provider_config.json`. Credentials and secrets must live outside the repo.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "authoring_default": {
+      "type": "string",
+      "enum": ["frontier_api", "subscription", "self_hosted", "hybrid"]
+    },
+    "runtime_default": {
+      "type": "string",
+      "enum": ["self_hosted", "remote_optional"]
+    },
+    "allow_remote_runtime_adapters": {
+      "type": "boolean",
+      "default": false
+    },
+    "mvp_max_full_planning_npcs": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 3,
+      "description": "MVP validation cap for NPCs using full_planning behavior. This is a runtime/content validation rule, not an NPC schema constraint. Exceeding it is a warning in dev validation and a hard error for release/export validation."
+    },
+    "runtime_profiles": {
+      "type": "array",
+      "description": "Named runtime inference profiles. NPC content may reference profile ids, but provider/hardware details stay here rather than in NPC schemas.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["self_hosted", "remote"]
+          },
+          "adapter": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "enabled_by_default": {
+            "type": "boolean",
+            "default": false
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        },
+        "required": ["id", "kind", "adapter", "model"],
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2048
+    }
+  },
+  "required": ["version", "authoring_default", "runtime_default", "allow_remote_runtime_adapters"],
+  "additionalProperties": false
+}

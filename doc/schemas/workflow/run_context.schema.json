@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/workflow/run_context.schema.json",
+  "title": "Agentic Run Context Provenance",
+  "description": "Workflow schema for context provenance recorded in `.halcyon/runs/<run_id>/context.json`.",
+  "type": "object",
+  "properties": {
+    "context_pack_path": {
+      "$ref": "#/$defs/path"
+    },
+    "context_pack_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "loaded_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": ["path", "sha256"],
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    },
+    "searched_reference_roots": {
+      "type": "array",
+      "description": "External root searches recorded locally. Absolute paths in this section are redacted from generated PR bodies by default.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "required": ["path", "query"],
+        "additionalProperties": false
+      }
+    },
+    "citations": {
+      "type": "array",
+      "description": "Context citations used for run decisions. Generated PR bodies use repo-relative paths or redacted external-root labels by default.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "excerpt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "required": ["path", "excerpt", "decision"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["context_pack_path", "context_pack_hash", "loaded_files"],
+  "additionalProperties": false,
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[^\\\\]+$"
+    }
+  }
+}

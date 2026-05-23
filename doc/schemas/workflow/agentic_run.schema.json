@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/workflow/agentic_run.schema.json",
+  "title": "Agentic Run Metadata",
+  "description": "Workflow schema for `.halcyon/runs/<run_id>/run.json`. This validates agent workflow metadata, not runtime Project Manifest content.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+    },
+    "status": {
+      "type": "string",
+      "description": "Blocked means a human decision or outside capability is needed. Failed means an unrecoverable implementation, tool, or runtime error.",
+      "enum": ["draft", "approved", "running", "blocked", "failed", "ready_for_review", "accepted", "rejected", "cancelled"]
+    },
+    "permission_envelope": {
+      "$ref": "permission_envelope.schema.json"
+    },
+    "working_branch": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "working_worktree": {
+      "$ref": "#/$defs/path"
+    },
+    "plan": {
+      "type": "string",
+      "maxLength": 16384
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 8192
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "commit_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "pull_request_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "pull_request_blocker": {
+      "type": "string",
+      "maxLength": 2048
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "estimated_spend_usd": { "type": "number", "minimum": 0 },
+        "actual_spend_usd": { "type": "number", "minimum": 0 },
+        "tokens_in": { "type": "integer", "minimum": 0 },
+        "tokens_out": { "type": "integer", "minimum": 0 },
+        "wall_time_minutes": { "type": "number", "minimum": 0 },
+        "self_hosted_resource_summary": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      },
+      "additionalProperties": false
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["human_decision", "permission", "credential", "missing_reference_root", "ambiguous_requirement", "gate_failure", "other"]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": ["kind", "message"],
+        "additionalProperties": false
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "transcript": { "$ref": "#/$defs/path" },
+        "validation": { "$ref": "#/$defs/path" },
+        "scene_tests": { "$ref": "#/$defs/path" },
+        "context": { "$ref": "#/$defs/path" },
+        "event_log_excerpt": { "$ref": "#/$defs/path" },
+        "diff": { "$ref": "#/$defs/path" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "goal", "status", "permission_envelope", "created_at", "updated_at"],
+  "additionalProperties": false,
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[^\\\\]+$"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../doc/schemas/workflow/agentic_run_prompt.schema.json",
+  "id": "001_add_karnish_first_contact_storylet",
+  "title": "Add a Karnish first-contact storylet",
+  "prompt": "Add a first-contact Storylet for the immediate post-crash opening where Karnish hunters approach the Halcyon smoke column. It should use the existing Karnish and Halcyon context, avoid changing unrelated SubFactions, and validate cleanly.",
+  "category": "storylet_narrative",
+  "expected_changed_surfaces": ["manifest", "storylet"],
+  "required_gates": ["manifest_validation"],
+  "allowed_context_entries": [
+    "doc/CONTEXT.md",
+    "doc/game-design/GLOSSARY.md",
+    "doc/game-design/PROJECT_HALCYON_DESIGN.md"
+  ],
+  "success_assertions": [
+    "A new or updated Storylet represents Karnish first contact at the Halcyon crash site.",
+    "All Reference URNs used by the Storylet resolve.",
+    "No unrelated SubFaction content changes are made.",
+    "The Agentic Run reaches Ready For Review with validation evidence."
+  ]
+}

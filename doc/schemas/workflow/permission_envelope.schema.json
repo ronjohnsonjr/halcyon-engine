@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/workflow/permission_envelope.schema.json",
+  "title": "Permission Envelope",
+  "description": "Workflow schema for the structured boundary enforced during an Agentic Run. This is not runtime Project Manifest content.",
+  "type": "object",
+  "properties": {
+    "allowed_paths": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/path" },
+      "uniqueItems": true
+    },
+    "allowed_urn_kinds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "allowed_tool_categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["read", "edit", "shell", "validate", "scene_test", "asset_search", "agent", "git"]
+      },
+      "uniqueItems": true
+    },
+    "forbidden_operations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "uniqueItems": true
+    },
+    "budgets": {
+      "type": "object",
+      "properties": {
+        "max_spend_usd": { "type": "number", "minimum": 0 },
+        "max_wall_time_minutes": { "type": "integer", "minimum": 1 },
+        "max_turns": { "type": "integer", "minimum": 1 },
+        "max_repair_attempts_per_gate": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "required_gates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["manifest_validation", "schema_fixtures", "scene_tests", "deterministic_replay", "doc_links", "doc_format"]
+      },
+      "uniqueItems": true
+    },
+    "human_gated_paths": {
+      "type": "array",
+      "description": "Paths requiring explicit human approval. Defaults include Context Pack configuration, Provider Configuration, workflow schemas, permission defaults, engine source, core schemas, ADR-level architecture, and destructive migrations.",
+      "items": { "$ref": "#/$defs/path" },
+      "uniqueItems": true
+    },
+    "provider_cost_class": {
+      "type": "string",
+      "enum": ["self_hosted", "frontier_api", "subscription", "hybrid"]
+    },
+    "sub_agent_policy": {
+      "type": "string",
+      "enum": ["disallowed", "allowed_with_child_envelopes", "allowed_within_parent_envelope"]
+    },
+    "natural_language_summary": {
+      "type": "string",
+      "maxLength": 4096
+    }
+  },
+  "required": ["allowed_tool_categories", "provider_cost_class", "sub_agent_policy"],
+  "additionalProperties": false,
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[^\\\\]+$"
+    }
+  }
+}

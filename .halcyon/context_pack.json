@@ -1,0 +1,24 @@
+{
+  "$schema": "doc/schemas/workflow/context_pack.schema.json",
+  "version": 1,
+  "name": "Halcyon Engine and Flagship Project",
+  "engine_context": [
+    "doc/CONTEXT.md",
+    "doc/ENGINEERING.md",
+    "doc/adr/"
+  ],
+  "project_context": [
+    "doc/game-design/GLOSSARY.md",
+    "doc/game-design/PROJECT_HALCYON_DESIGN.md"
+  ],
+  "reference_roots": [
+    {
+      "path": "K:/personal/halcyon",
+      "mode": "read_only",
+      "description": "Broader Project Halcyon game-design archive for optional context search."
+    }
+  ],
+  "skills": [
+    "grill-with-docs"
+  ]
+}

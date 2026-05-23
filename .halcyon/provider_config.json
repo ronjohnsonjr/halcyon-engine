@@ -1,0 +1,27 @@
+{
+  "$schema": "doc/schemas/workflow/provider_config.schema.json",
+  "version": 1,
+  "authoring_default": "hybrid",
+  "runtime_default": "self_hosted",
+  "allow_remote_runtime_adapters": true,
+  "mvp_max_full_planning_npcs": 3,
+  "runtime_profiles": [
+    {
+      "id": "local_demo",
+      "kind": "self_hosted",
+      "adapter": "local",
+      "model": "gemma-4-2b-class",
+      "enabled_by_default": true,
+      "notes": "Default local/self-hosted runtime profile for MVP demo NPCs."
+    },
+    {
+      "id": "remote_optional",
+      "kind": "remote",
+      "adapter": "remote",
+      "model": "server-configured",
+      "enabled_by_default": false,
+      "notes": "Optional remote adapter profile. Requires explicit server config and credentials."
+    }
+  ],
+  "notes": "Non-secret provider preferences only. Credentials live in user/server config or environment variables."
+}

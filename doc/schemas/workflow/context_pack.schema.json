@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.engine-project.example/v0/workflow/context_pack.schema.json",
+  "title": "Context Pack Manifest (.halcyon/context_pack.json)",
+  "description": "Workflow schema for project-specific context loaded by Authoring-Time Agents during Agentic Runs. This validates workflow metadata, not runtime Project Manifest content.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "engine_context": {
+      "type": "array",
+      "description": "Engine/tooling glossary, engineering, and ADR paths loaded for Agentic Runs.",
+      "items": { "$ref": "#/$defs/path" },
+      "uniqueItems": true
+    },
+    "project_context": {
+      "type": "array",
+      "description": "Project-specific design, glossary, convention, and reference paths loaded for Agentic Runs.",
+      "items": { "$ref": "#/$defs/path" },
+      "uniqueItems": true
+    },
+    "reference_roots": {
+      "type": "array",
+      "description": "Explicit read-only external roots that Agentic Runs may search for additional context. These roots are not project content, are not edited, and are not required for builds.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "mode": {
+            "type": "string",
+            "const": "read_only"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512
+          }
+        },
+        "required": ["path", "mode"],
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    },
+    "skills": {
+      "type": "array",
+      "description": "Skill names made available to Authoring-Time Agents for this project.",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": ["version", "name"],
+  "additionalProperties": false,
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[^\\\\]+$"
+    }
+  }
+}
